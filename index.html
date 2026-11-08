@@ -68,7 +68,7 @@
     overlayText.innerHTML='카메라를 연결하고 있습니다.<br>권한 요청이 나타나면 허용해 주세요.';
     try{
       if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('unsupported');
-      try { stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false}); }
+      try { stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:3840},height:{ideal:2160}},audio:false}); }
       catch(e){ if(e.name==='OverconstrainedError') stream=await navigator.mediaDevices.getUserMedia({video:true,audio:false}); else throw e; }
       video.srcObject=stream; await video.play(); overlay.hidden=true; capture.disabled=false;
       statusEl.textContent='';
@@ -94,9 +94,36 @@
       statusEl.textContent=`JPEG · ${(photo.size/1024).toFixed(1)}KB · ${result.width} × ${result.height}px`;
     } catch(e){console.error(e);statusEl.textContent='사진 처리에 실패했습니다. 다시 촬영해 주세요.';capture.disabled=!stream;}
   }
-  capture.addEventListener('click',()=>{
+  function imageFromBlob(blob){
+    return new Promise((resolve,reject)=>{
+      const url=URL.createObjectURL(blob), image=new Image();
+      image.onload=()=>{URL.revokeObjectURL(url);resolve(image);};
+      image.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('촬영한 사진을 읽을 수 없습니다.'));};
+      image.src=url;
+    });
+  }
+  capture.addEventListener('click',async()=>{
+    if(capture.disabled) return;
     if(!video.videoWidth || !video.videoHeight){statusEl.textContent='카메라가 준비될 때까지 잠시 기다려 주세요.';return;}
-    processImage(video,video.videoWidth,video.videoHeight);
+    capture.disabled=true;statusEl.textContent='사진을 촬영하고 있습니다...';
+    let source=video,width=video.videoWidth,height=video.videoHeight;
+    try{
+      const track=stream && stream.getVideoTracks()[0];
+      if(track && typeof window.ImageCapture==='function'){
+        const camera=new ImageCapture(track);
+        let blob;
+        try{
+          const caps=await camera.getPhotoCapabilities();
+          const settings={};
+          if(caps.imageWidth && caps.imageWidth.max>0) settings.imageWidth=caps.imageWidth.max;
+          if(caps.imageHeight && caps.imageHeight.max>0) settings.imageHeight=caps.imageHeight.max;
+          blob=await camera.takePhoto(settings);
+        }catch(error){blob=await camera.takePhoto();}
+        const image=await imageFromBlob(blob);
+        source=image;width=image.naturalWidth;height=image.naturalHeight;
+      }
+    }catch(error){console.warn('고해상도 사진 촬영이 지원되지 않아 카메라 영상으로 촬영합니다.',error);}
+    await processImage(source,width,height);
   });
   retry.addEventListener('click',startCamera);
   fallback.addEventListener('click',()=>{input.value='';input.click();});
