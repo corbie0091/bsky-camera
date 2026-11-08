@@ -55,6 +55,7 @@
   <p id="dialogMessage">다운로드를 시작했습니다. 갤러리 또는 내 파일의 다운로드 폴더에서 사진을 확인해 주세요.</p>
   <div class="dialog-actions"><button type="button" class="save" id="confirmPhoto">확인하기</button><button type="button" class="retake" id="closeDialog">닫기</button></div>
 </dialog>
+<script src="./bsky-share.js"></script>
 <script>
   const MAX_BYTES=400*1024;
   const $=id=>document.getElementById(id);
@@ -125,13 +126,13 @@
   $('saveDialog').addEventListener('cancel',e=>{e.preventDefault();closeMessage();reset('');});
   share.addEventListener('click',async()=>{
     if(!photo) return;
-    let supported=false;
-    try {supported=typeof navigator.share==='function' && typeof navigator.canShare==='function' && navigator.canShare({files:[photo]});}catch(e){}
-    if(!supported){
-      showMessage('공유할 수 없습니다','이 브라우저에서는 사진 공유를 지원하지 않습니다. 저장하기로 사진을 다운로드한 뒤 갤러리 또는 내 파일에서 공유해 주세요. Chrome으로 다시 열어 보셔도 좋습니다.');return;
+    if(!window.BskyShare){
+      showMessage('공유 기능을 불러오지 못했습니다','index.html과 bsky-share.js가 같은 폴더에 있는지 확인해 주세요.');return;
     }
-    try {await navigator.share({files:[photo],title:'비스카이 사진'});reset('공유 창에서 돌아왔습니다. 다음 사진을 촬영해 주세요.');}
-    catch(e){if(e.name==='AbortError') statusEl.textContent='공유가 취소되었습니다. 사진을 확인하고 다시 시도해 주세요.';else showMessage('공유할 수 없습니다','공유 창을 열지 못했습니다. 저장하기로 사진을 다운로드한 뒤 갤러리 또는 내 파일에서 공유해 주세요.');}
+    const result=await window.BskyShare.sharePhoto(photo);
+    if(result.status==='shared') reset('공유 창에서 돌아왔습니다. 다음 사진을 촬영해 주세요.');
+    else if(result.status==='cancelled') statusEl.textContent='공유가 취소되었습니다. 사진을 확인하고 다시 시도해 주세요.';
+    else showMessage('공유할 수 없습니다','이 브라우저에서 사진 공유 창을 열지 못했습니다. Chrome에서 다시 열거나, 사진을 저장한 뒤 갤러리 또는 내 파일에서 공유해 주세요.');
   });
   retake.addEventListener('click',()=>reset(''));
   function reset(message){
