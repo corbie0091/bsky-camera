@@ -1,247 +1,148 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#053ca3" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#053ca3">
   <title>비스카이 사진 촬영</title>
   <style>
-    :root { --blue:#053ca3; --blue2:#2584f0; --ink:#172033; --muted:#667085; --line:#e5eaf2; }
-    * { box-sizing:border-box; }
-    body {
-      margin:0; min-height:100vh; background:#f4f7fb; color:var(--ink);
-      font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Noto Sans KR",sans-serif;
-    }
-    .app { width:min(100%,560px); min-height:100vh; margin:0 auto; background:#fff; display:flex; flex-direction:column; }
-    header { background:linear-gradient(120deg,var(--blue),var(--blue2)); color:#fff; padding:22px 20px 25px; }
-    .brand { font-size:23px; font-weight:850; letter-spacing:-.7px; }
-    .subtitle { margin-top:6px; font-size:13px; opacity:.88; }
-    main { padding:22px 18px 32px; flex:1; }
-    .notice { padding:13px 14px; border-radius:12px; background:#eef5ff; color:#244a82; font-size:13px; line-height:1.55; margin-bottom:18px; }
-    .preview-wrap { width:100%; aspect-ratio:4/3; border:1.5px dashed #cbd5e1; border-radius:16px; background:#f8fafc; overflow:hidden; display:flex; align-items:center; justify-content:center; position:relative; }
-    .preview-wrap img { display:none; width:100%; height:100%; object-fit:contain; background:#111827; }
-    .empty { text-align:center; color:#98a2b3; padding:20px; }
-    .empty svg { display:block; margin:0 auto 12px; }
-    .empty strong { display:block; color:#667085; font-size:15px; margin-bottom:5px; }
-    .empty span { font-size:12px; }
-    .actions { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:16px; }
-    button,.download {
-      border:0; border-radius:12px; min-height:52px; padding:0 14px; font-size:15px; font-weight:750;
-      cursor:pointer; display:flex; align-items:center; justify-content:center; text-decoration:none;
-    }
-    button:disabled { opacity:.45; cursor:not-allowed; }
-    .primary { background:var(--blue2); color:#fff; grid-column:1/-1; }
-    .secondary { background:#eef2f7; color:#344054; }
-    .download { background:var(--blue); color:#fff; grid-column:1/-1; display:none; }
-    .meta { display:none; margin-top:14px; padding:12px 14px; background:#f8fafc; border:1px solid var(--line); border-radius:12px; font-size:13px; color:#475467; line-height:1.6; }
-    .meta strong { color:#101828; }
-    .tip { color:var(--muted); font-size:12px; line-height:1.6; margin:16px 2px 0; }
-    input[type=file] { display:none; }
-    .status { min-height:18px; margin-top:12px; text-align:center; color:#475467; font-size:12px; }
-    footer { text-align:center; padding:16px; border-top:1px solid #f0f2f5; color:#98a2b3; font-size:11px; }
+    *{box-sizing:border-box} body{margin:0;background:#eef3fa;color:#172033;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans KR",sans-serif}
+    .app{width:min(100%,560px);min-height:100dvh;margin:auto;background:white;display:flex;flex-direction:column}
+    header{background:linear-gradient(120deg,#053ca3,#2584f0);color:#fff;padding:18px 20px}
+    .brand{font-size:22px;font-weight:850;letter-spacing:-.6px}.subtitle{font-size:13px;opacity:.9;margin-top:4px}
+    main{padding:18px;flex:1;display:flex;flex-direction:column}.heading{font-size:16px;font-weight:750;margin:0 0 12px}
+    .view{position:relative;width:100%;aspect-ratio:3/4;max-height:65dvh;overflow:hidden;background:#121c2c;border-radius:16px;display:flex;align-items:center;justify-content:center}
+    video,img{width:100%;height:100%;object-fit:contain} video[hidden],img[hidden],[hidden]{display:none!important}
+    .overlay{position:absolute;inset:0;color:white;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:24px;background:#182639;gap:12px;line-height:1.6;font-size:14px}
+    .overlay svg{opacity:.85}.overlay p{margin:0}.overlay button{min-height:44px;background:#fff;color:#053ca3}
+    button{border:0;border-radius:12px;min-height:52px;padding:0 14px;font-size:15px;font-weight:750;cursor:pointer}
+    button:disabled{opacity:.5;cursor:not-allowed}.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+    .capture{grid-column:1/-1;color:#fff;background:#2584f0}.save{color:white;background:#053ca3}.share{color:white;background:#2584f0}.retake{grid-column:1/-1;color:#344054;background:#eef2f7;min-height:44px}
+    .status{min-height:20px;font-size:13px;line-height:1.5;color:#475467;text-align:center;margin:12px 0 0}.tip{font-size:12px;line-height:1.6;color:#667085;margin:12px 2px 0}
+    footer{text-align:center;padding:14px;border-top:1px solid #f0f2f5;color:#98a2b3;font-size:11px}
   </style>
 </head>
 <body>
-  <div class="app">
-    <header>
-      <div class="brand">비스카이</div>
-      <div class="subtitle">현장 사진 촬영 및 저장</div>
-    </header>
-
-    <main>
-      <div class="notice">
-        사진 촬영 버튼을 누르면 휴대폰의 카메라 촬영 화면이 열립니다.
-        촬영 후 사진 왼쪽 위에 비스카이 로고를 넣고, 파일 크기를 <strong>400KB 이하</strong>로 자동 조정합니다.
+<div class="app">
+  <header><div class="brand">비스카이</div><div class="subtitle">현장 사진 촬영 및 저장</div></header>
+  <main>
+    <p class="heading" id="heading">촬영할 대상을 화면에 맞춰 주세요</p>
+    <div class="view">
+      <video id="video" autoplay muted playsinline aria-label="카메라 미리보기"></video>
+      <img id="preview" alt="로고가 삽입된 촬영 사진 미리보기" hidden>
+      <div class="overlay" id="overlay">
+        <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 7h3l1.5-2h7L17 7h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+        <p id="overlayText">카메라를 연결하고 있습니다.<br>권한 요청이 나타나면 허용해 주세요.</p>
+        <button type="button" id="retry" hidden>카메라 다시 연결</button>
+        <button type="button" id="fallback" hidden>기기 카메라로 촬영</button>
       </div>
-
-      <div class="preview-wrap">
-        <div class="empty" id="emptyState">
-          <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <path d="M4 7h3l1.5-2h7L17 7h3v12H4z"/><circle cx="12" cy="13" r="3.5"/>
-          </svg>
-          <strong>촬영한 사진이 여기에 표시됩니다</strong>
-          <span>촬영 후 로고가 자동으로 삽입됩니다.</span>
-        </div>
-        <img id="preview" alt="로고가 삽입된 촬영 사진 미리보기" />
-      </div>
-
-      <input id="cameraInput" type="file" accept="image/*" capture="environment" />
-      <div class="actions">
-        <button class="primary" id="cameraButton" type="button">사진 촬영하기</button>
-        <button class="secondary" id="retakeButton" type="button" disabled>다시 촬영</button>
-        <button class="secondary" id="resetButton" type="button" disabled>초기화</button>
-        <a class="download" id="downloadButton" href="#" download="bsky-photo.jpg">사진 저장하기</a>
-      </div>
-
-      <div class="meta" id="fileMeta"></div>
-      <div class="status" id="status" role="status" aria-live="polite"></div>
-      <p class="tip">
-        ※ 모바일 브라우저에서 카메라 실행을 지원합니다. 기기 및 브라우저에 따라 기본 카메라 앱 대신 브라우저 내 촬영 화면이 열릴 수 있습니다.<br>
-        ※ 사진은 이 페이지 안에서 처리되며 서버로 전송되지 않습니다.
-      </p>
-    </main>
-    <footer>BSKY · 현장 사진 관리</footer>
-  </div>
-
-  <script>
-    const MAX_BYTES = 400 * 1024;
-    const input = document.getElementById('cameraInput');
-    const preview = document.getElementById('preview');
-    const emptyState = document.getElementById('emptyState');
-    const cameraButton = document.getElementById('cameraButton');
-    const retakeButton = document.getElementById('retakeButton');
-    const resetButton = document.getElementById('resetButton');
-    const downloadButton = document.getElementById('downloadButton');
-    const fileMeta = document.getElementById('fileMeta');
-    const statusEl = document.getElementById('status');
-    let currentUrl = null;
-
-    cameraButton.addEventListener('click', () => {
-      input.value = '';
-      input.click();
-    });
-    retakeButton.addEventListener('click', () => {
-      input.value = '';
-      input.click();
-    });
-    resetButton.addEventListener('click', resetPage);
-
-    input.addEventListener('change', async (event) => {
-      const file = event.target.files && event.target.files[0];
-      if (!file) return;
-      if (!file.type.startsWith('image/')) {
-        statusEl.textContent = '이미지 파일을 선택해 주세요.';
-        return;
-      }
-      statusEl.textContent = '사진을 처리하고 있습니다...';
-      cameraButton.disabled = true;
-      retakeButton.disabled = true;
-      downloadButton.style.display = 'none';
-
-      try {
-        const image = await loadImage(file);
-        const result = await makeCompressedBrandedImage(image);
-        if (currentUrl) URL.revokeObjectURL(currentUrl);
-        currentUrl = URL.createObjectURL(result.blob);
-        preview.src = currentUrl;
-        preview.style.display = 'block';
-        emptyState.style.display = 'none';
-
-        downloadButton.href = currentUrl;
-        downloadButton.download = 'bsky-photo.jpg';
-        downloadButton.style.display = 'flex';
-        retakeButton.disabled = false;
-        resetButton.disabled = false;
-
-        const kb = (result.blob.size / 1024).toFixed(1);
-        fileMeta.style.display = 'block';
-        fileMeta.innerHTML = `<strong>저장 파일 정보</strong><br>형식: JPEG<br>용량: <strong>${kb}KB / 400KB</strong><br>이미지 크기: ${result.width} × ${result.height}px`;
-        statusEl.textContent = result.blob.size <= MAX_BYTES
-          ? '완료: 비스카이 로고 삽입 및 400KB 이하 압축이 완료되었습니다.'
-          : '처리가 완료됐지만 목표 용량을 초과했습니다. 다른 사진으로 다시 시도해 주세요.';
-      } catch (error) {
-        console.error(error);
-        statusEl.textContent = '사진 처리에 실패했습니다. 다른 사진으로 다시 시도해 주세요.';
-      } finally {
-        cameraButton.disabled = false;
-        if (preview.src) retakeButton.disabled = false;
-      }
-    });
-
-    function loadImage(file) {
-      return new Promise((resolve, reject) => {
-        const url = URL.createObjectURL(file);
-        const img = new Image();
-        img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
-        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('이미지를 불러오지 못했습니다.')); };
-        img.src = url;
-      });
+    </div>
+    <input id="cameraInput" type="file" accept="image/*" capture="environment" hidden>
+    <div class="actions">
+      <button type="button" class="capture" id="capture" disabled>사진 촬영하기</button>
+      <button type="button" class="save" id="save" hidden>저장하기</button>
+      <button type="button" class="share" id="share" hidden>공유하기</button>
+      <button type="button" class="retake" id="retake" hidden>다시 촬영</button>
+    </div>
+    <p class="status" id="status" role="status" aria-live="polite"></p>
+    <p class="tip">촬영한 사진에 비스카이 로고가 표시되며, JPEG 400KB 이하로 자동 조정됩니다.<br>사진은 기기에서 처리되며 서버로 전송되지 않습니다.</p>
+  </main>
+  <footer>BSKY · 현장 사진 관리</footer>
+</div>
+<script>
+  const MAX_BYTES=400*1024;
+  const $=id=>document.getElementById(id);
+  const video=$('video'), preview=$('preview'), overlay=$('overlay'), overlayText=$('overlayText');
+  const capture=$('capture'), save=$('save'), share=$('share'), retake=$('retake'), retry=$('retry'), fallback=$('fallback'), input=$('cameraInput'), statusEl=$('status');
+  let stream=null, photo=null, photoUrl=null, starting=false;
+  async function startCamera(){
+    if(starting || (stream && stream.active)) return;
+    starting=true; capture.disabled=true; retry.hidden=true; fallback.hidden=true; overlay.hidden=false;
+    overlayText.innerHTML='카메라를 연결하고 있습니다.<br>권한 요청이 나타나면 허용해 주세요.';
+    try{
+      if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('unsupported');
+      try { stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false}); }
+      catch(e){ if(e.name==='OverconstrainedError') stream=await navigator.mediaDevices.getUserMedia({video:true,audio:false}); else throw e; }
+      video.srcObject=stream; await video.play(); overlay.hidden=true; capture.disabled=false;
+      statusEl.textContent='';
+    }catch(e){
+      if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}
+      let message='카메라를 연결하지 못했습니다. 다시 연결하거나 기기 카메라를 이용해 주세요.';
+      if(!window.isSecureContext) message='카메라를 사용하려면 HTTPS 주소로 접속해 주세요.';
+      else if(e.name==='NotAllowedError' || e.name==='SecurityError') message='카메라 접근이 허용되지 않았습니다. 브라우저 또는 기기 설정에서 카메라 권한을 허용해 주세요.';
+      else if(e.name==='NotFoundError') message='사용할 수 있는 카메라를 찾지 못했습니다.';
+      overlayText.textContent=message; retry.hidden=false; fallback.hidden=false;
+    }finally{starting=false;}
+  }
+  async function processImage(source,width,height){
+    capture.disabled=true; statusEl.textContent='사진을 처리하고 있습니다...';
+    try {
+      const result=await compress(source,width,height);
+      photo=new File([result.blob],'bsky-photo.jpg',{type:'image/jpeg'});
+      if(photoUrl) URL.revokeObjectURL(photoUrl);
+      photoUrl=URL.createObjectURL(photo); preview.src=photoUrl; preview.hidden=false; video.hidden=true; overlay.hidden=true;
+      capture.hidden=true; save.hidden=false; share.hidden=false; retake.hidden=false;
+      $('heading').textContent='사진을 확인해 주세요';
+      statusEl.textContent=`JPEG · ${(photo.size/1024).toFixed(1)}KB · ${result.width} × ${result.height}px`;
+    } catch(e){console.error(e);statusEl.textContent='사진 처리에 실패했습니다. 다시 촬영해 주세요.';capture.disabled=!stream;}
+  }
+  capture.addEventListener('click',()=>{
+    if(!video.videoWidth || !video.videoHeight){statusEl.textContent='카메라가 준비될 때까지 잠시 기다려 주세요.';return;}
+    processImage(video,video.videoWidth,video.videoHeight);
+  });
+  retry.addEventListener('click',startCamera);
+  fallback.addEventListener('click',()=>{input.value='';input.click();});
+  input.addEventListener('change',()=>{
+    const file=input.files && input.files[0]; if(!file) return;
+    const url=URL.createObjectURL(file), image=new Image();
+    image.onload=()=>{URL.revokeObjectURL(url);processImage(image,image.naturalWidth,image.naturalHeight);};
+    image.onerror=()=>{URL.revokeObjectURL(url);statusEl.textContent='사진을 불러오지 못했습니다. 다시 시도해 주세요.';}; image.src=url;
+  });
+  save.addEventListener('click',()=>{
+    if(!photo) return;
+    const url=URL.createObjectURL(photo), link=document.createElement('a');
+    link.href=url;link.download=photo.name;document.body.appendChild(link);link.click();link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),60000);
+    reset('저장을 요청했습니다. 다음 사진을 촬영해 주세요.');
+  });
+  share.addEventListener('click',async()=>{
+    if(!photo) return;
+    if(!navigator.share || !navigator.canShare || !navigator.canShare({files:[photo]})){
+      statusEl.textContent='이 브라우저는 사진 파일 공유를 지원하지 않습니다. 저장 후 기기에서 공유해 주세요.';return;
     }
-
-    async function makeCompressedBrandedImage(image) {
-      // 원본 비율을 유지하면서 긴 변을 단계적으로 줄여 400KB 이하 JPEG를 생성합니다.
-      let maxSide = 2400;
-      let quality = 0.86;
-      let blob = null;
-      let canvas, ctx, width, height;
-
-      for (let attempt = 0; attempt < 18; attempt++) {
-        const scale = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight));
-        width = Math.max(1, Math.round(image.naturalWidth * scale));
-        height = Math.max(1, Math.round(image.naturalHeight * scale));
-        canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        ctx = canvas.getContext('2d', { alpha:false });
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, width, height);
-        ctx.drawImage(image, 0, 0, width, height);
-        drawLogo(ctx, width, height);
-
-        blob = await canvasToBlob(canvas, quality);
-        if (blob.size <= MAX_BYTES) return { blob, width, height };
-
-        if (quality > 0.48) quality -= 0.08;
-        else {
-          quality = 0.68;
-          maxSide = Math.round(maxSide * 0.82);
-        }
-      }
-      if (blob && blob.size <= MAX_BYTES) return { blob, width, height };
-      throw new Error('400KB 이하로 압축하지 못했습니다.');
+    try {await navigator.share({files:[photo],title:'비스카이 사진'});reset('공유 창에서 돌아왔습니다. 다음 사진을 촬영해 주세요.');}
+    catch(e){if(e.name==='AbortError') statusEl.textContent='공유가 취소되었습니다. 사진을 확인하고 다시 시도해 주세요.';else statusEl.textContent='공유하지 못했습니다. 다시 시도하거나 저장해 주세요.';}
+  });
+  retake.addEventListener('click',()=>reset(''));
+  function reset(message){
+    if(photoUrl) URL.revokeObjectURL(photoUrl); photoUrl=null;photo=null;preview.removeAttribute('src');preview.hidden=true;video.hidden=false;
+    capture.hidden=false;save.hidden=true;share.hidden=true;retake.hidden=true;input.value='';$('heading').textContent='촬영할 대상을 화면에 맞춰 주세요';
+    statusEl.textContent=message;capture.disabled=!stream || !stream.active;
+    if(!stream || !stream.active) startCamera();
+  }
+  async function compress(source,sourceWidth,sourceHeight){
+    let maxSide=2400,quality=.86;
+    for(let attempt=0;attempt<18;attempt++){
+      const scale=Math.min(1,maxSide/Math.max(sourceWidth,sourceHeight));
+      const width=Math.max(1,Math.round(sourceWidth*scale)),height=Math.max(1,Math.round(sourceHeight*scale));
+      const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
+      const ctx=canvas.getContext('2d',{alpha:false});ctx.fillStyle='#fff';ctx.fillRect(0,0,width,height);ctx.drawImage(source,0,0,width,height);drawLogo(ctx,width,height);
+      const blob=await new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('JPEG 변환 실패')),'image/jpeg',quality));
+      if(blob.size<=MAX_BYTES) return {blob,width,height};
+      if(quality>.48) quality-=.08;else{quality=.68;maxSide=Math.round(maxSide*.82);}
     }
-
-    function drawLogo(ctx, width, height) {
-      const scale = Math.max(0.75, Math.min(width, height) / 900);
-      const pad = Math.round(18 * scale);
-      const fontSize = Math.round(27 * scale);
-      const text = '비스카이';
-      ctx.save();
-      ctx.font = `800 ${fontSize}px -apple-system, BlinkMacSystemFont, sans-serif`;
-      const textWidth = ctx.measureText(text).width;
-      const boxW = textWidth + pad * 1.5;
-      const boxH = fontSize + pad;
-      const x = Math.round(width * 0.025);
-      const y = Math.round(height * 0.035);
-      ctx.fillStyle = 'rgba(5, 60, 163, 0.88)';
-      roundedRect(ctx, x, y, boxW, boxH, Math.round(9 * scale));
-      ctx.fill();
-      ctx.fillStyle = '#ffffff';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(text, x + pad * 0.75, y + boxH / 2 + 1);
-      ctx.restore();
-    }
-
-    function roundedRect(ctx, x, y, w, h, r) {
-      ctx.beginPath();
-      ctx.moveTo(x + r, y);
-      ctx.arcTo(x + w, y, x + w, y + h, r);
-      ctx.arcTo(x + w, y + h, x, y + h, r);
-      ctx.arcTo(x, y + h, x, y, r);
-      ctx.arcTo(x, y, x + w, y, r);
-      ctx.closePath();
-    }
-
-    function canvasToBlob(canvas, quality) {
-      return new Promise((resolve, reject) => {
-        canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('이미지 변환 실패')), 'image/jpeg', quality);
-      });
-    }
-
-    function resetPage() {
-      if (currentUrl) URL.revokeObjectURL(currentUrl);
-      currentUrl = null;
-      preview.removeAttribute('src');
-      preview.style.display = 'none';
-      emptyState.style.display = 'block';
-      downloadButton.style.display = 'none';
-      fileMeta.style.display = 'none';
-      fileMeta.textContent = '';
-      statusEl.textContent = '';
-      retakeButton.disabled = true;
-      resetButton.disabled = true;
-      input.value = '';
-    }
-  </script>
+    throw new Error('400KB 이하로 압축하지 못했습니다.');
+  }
+  function drawLogo(ctx,width,height){
+    const scale=Math.max(.75,Math.min(width,height)/900),pad=Math.round(18*scale),fontSize=Math.round(27*scale);
+    ctx.save();ctx.font=`800 ${fontSize}px -apple-system, BlinkMacSystemFont, sans-serif`;
+    const boxW=ctx.measureText('비스카이').width+pad*1.5,boxH=fontSize+pad,x=Math.round(width*.025),y=Math.round(height*.035),r=Math.round(9*scale);
+    ctx.fillStyle='rgba(5,60,163,.88)';ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+boxW,y,x+boxW,y+boxH,r);ctx.arcTo(x+boxW,y+boxH,x,y+boxH,r);ctx.arcTo(x,y+boxH,x,y,r);ctx.arcTo(x,y,x+boxW,y,r);ctx.closePath();ctx.fill();
+    ctx.fillStyle='#fff';ctx.textBaseline='middle';ctx.fillText('비스카이',x+pad*.75,y+boxH/2+1);ctx.restore();
+  }
+  window.addEventListener('pagehide',()=>{if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}});
+  window.addEventListener('pageshow',event=>{if(event.persisted && !photo) startCamera();});
+  startCamera();
+</script>
 </body>
 </html>
