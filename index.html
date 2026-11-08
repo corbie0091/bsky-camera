@@ -29,6 +29,7 @@
     footer{text-align:center;padding:14px;border-top:1px solid #EDF1F6;color:#8A9AAC;font-size:11px}
     .quality{border:0;padding:0;margin:0 0 20px;min-width:0}.quality legend{font-size:14px;font-weight:700;margin-bottom:9px}.quality legend small{font-size:12px;color:var(--muted);font-weight:400}
     .quality-options{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.quality label{position:relative;cursor:pointer}.quality input{position:absolute;opacity:0}.quality span{display:flex;align-items:center;justify-content:center;min-height:42px;border:1px solid var(--line);border-radius:9px;font-size:13px;font-weight:700;color:var(--ink);background:#fff}.quality input:checked+span{background:#EBF6ED;color:#1b7130;border:2px solid #27A745}.quality input:focus-visible+span{outline:3px solid #82C88E;outline-offset:2px}.quality:disabled{opacity:.6}
+    .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:1000;width:max-content;max-width:calc(100vw - 36px);padding:12px 18px;border-radius:10px;background:rgba(21,45,69,.95);color:#fff;font-size:13px;line-height:1.5;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.16)}
     dialog{border:1px solid var(--line);border-radius:14px;padding:24px;width:min(90%,380px);text-align:center;color:var(--ink)}dialog::backdrop{background:#152D4599}dialog h2{font-size:19px;margin:0 0 10px}dialog p{font-size:14px;line-height:1.6;color:var(--muted)}.dialog-actions{display:flex;gap:10px;margin-top:18px}.dialog-actions button{flex:1}
   
   </style>
@@ -67,6 +68,7 @@
   </main>
   <footer>BSKY · 현장 사진 관리</footer>
 </div>
+<div class="toast" id="qualityToast" role="status" aria-live="polite" hidden>용량을 변경하려면 다시 촬영하기를 누르고 진행해 주세요.</div>
 <dialog id="saveDialog" aria-labelledby="dialogTitle">
   <h2 id="dialogTitle">사진 저장 요청</h2>
   <p id="dialogMessage">다운로드를 시작했습니다. 갤러리 또는 내 파일의 다운로드 폴더에서 사진을 확인해 주세요.</p>
@@ -81,6 +83,19 @@
   const capture=$('capture'), save=$('save'), share=$('share'), retake=$('retake'), retry=$('retry'), fallback=$('fallback'), input=$('cameraInput'), statusEl=$('status');
   let stream=null, photo=null, photoUrl=null, starting=false, capturedAt=null;
   const qualityField=$('qualityField');
+  const qualityToast=$('qualityToast');let toastTimer;
+  function showQualityToast(){
+    clearTimeout(toastTimer);qualityToast.hidden=false;
+    toastTimer=setTimeout(()=>{qualityToast.hidden=true;},2800);
+  }
+  qualityField.addEventListener('click',event=>{
+    if(photo && event.target.closest('label')){event.preventDefault();showQualityToast();}
+  });
+  qualityField.addEventListener('keydown',event=>{
+    if(photo && ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' '].includes(event.key)){
+      event.preventDefault();showQualityToast();
+    }
+  });
   let previewFrame=null;
   function stopPreview(){if(previewFrame!==null){cancelAnimationFrame(previewFrame);previewFrame=null;}}
   function startPreview(){
@@ -130,6 +145,7 @@
       if(document.fonts && document.fonts.load){try{await Promise.all([document.fonts.load('700 32px Paperlogy'),document.fonts.load('400 24px Paperlogy')]);}catch(error){console.warn('글꼴을 불러오지 못해 기본 글꼴을 사용합니다.',error);}}
       const result=await compress(source,width,height);
       photo=new File([result.blob],'bsky-photo.jpg',{type:'image/jpeg'});
+      qualityField.disabled=false;
       if(photoUrl) URL.revokeObjectURL(photoUrl);
       photoUrl=URL.createObjectURL(photo); preview.src=photoUrl; preview.hidden=false; cameraCanvas.hidden=true; overlay.hidden=true;
       capture.hidden=true; save.hidden=false; share.hidden=false; retake.hidden=false;
@@ -262,7 +278,7 @@
   function reset(message){
     if(photoUrl) URL.revokeObjectURL(photoUrl); photoUrl=null;photo=null;preview.removeAttribute('src');preview.hidden=true;cameraCanvas.hidden=false;
     capture.hidden=false;save.hidden=true;share.hidden=true;retake.hidden=true;input.value='';$('heading').textContent='전환 사진을 촬영해 주세요';
-    qualityField.disabled=false;statusEl.textContent=message;capture.disabled=!stream || !stream.active;
+    qualityField.disabled=false;qualityToast.hidden=true;clearTimeout(toastTimer);statusEl.textContent=message;capture.disabled=!stream || !stream.active;
     if(!stream || !stream.active) startCamera();
   }
   async function compress(source,sourceWidth,sourceHeight){
