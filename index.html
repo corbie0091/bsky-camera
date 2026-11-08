@@ -46,7 +46,7 @@
       <button type="button" class="retake" id="retake" hidden>다시 촬영</button>
     </div>
     <p class="status" id="status" role="status" aria-live="polite"></p>
-    <p class="tip">촬영한 사진에 비스카이 로고가 표시되며, JPEG 400KB 이하로 자동 조정됩니다.<br>저장하기를 누르면 사진이 다운로드됩니다. 저장 위치는 기기와 브라우저에 따라 다를 수 있습니다. 사진은 기기에서 처리되며 서버로 전송되지 않습니다.</p>
+    <p class="tip">촬영한 사진에 비스카이 로고가 표시되며, JPEG 600KB 이하로 자동 조정됩니다.<br>저장하기를 누르면 사진이 다운로드됩니다. 저장 위치는 기기와 브라우저에 따라 다를 수 있습니다. 사진은 기기에서 처리되며 서버로 전송되지 않습니다.</p>
   </main>
   <footer>BSKY · 현장 사진 관리</footer>
 </div>
@@ -57,7 +57,7 @@
 </dialog>
 <script src="./bsky-share.js"></script>
 <script>
-  const MAX_BYTES=400*1024;
+  const MAX_BYTES=600*1024;
   const $=id=>document.getElementById(id);
   const video=$('video'), preview=$('preview'), overlay=$('overlay'), overlayText=$('overlayText');
   const capture=$('capture'), save=$('save'), share=$('share'), retake=$('retake'), retry=$('retry'), fallback=$('fallback'), input=$('cameraInput'), statusEl=$('status');
@@ -141,17 +141,28 @@
     if(!stream || !stream.active) startCamera();
   }
   async function compress(source,sourceWidth,sourceHeight){
-    let maxSide=2400,quality=.86;
-    for(let attempt=0;attempt<18;attempt++){
+    // 높은 해상도와 품질부터 시도하고, 목표 용량 안에서 최대 품질을 찾습니다.
+    let maxSide=4000;
+    for(let attempt=0;attempt<12;attempt++){
       const scale=Math.min(1,maxSide/Math.max(sourceWidth,sourceHeight));
       const width=Math.max(1,Math.round(sourceWidth*scale)),height=Math.max(1,Math.round(sourceHeight*scale));
       const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
       const ctx=canvas.getContext('2d',{alpha:false});ctx.fillStyle='#fff';ctx.fillRect(0,0,width,height);ctx.drawImage(source,0,0,width,height);drawLogo(ctx,width,height);
-      const blob=await new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('JPEG 변환 실패')),'image/jpeg',quality));
+      const encode=quality=>new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('JPEG 변환 실패')),'image/jpeg',quality));
+      let blob=await encode(.96);
       if(blob.size<=MAX_BYTES) return {blob,width,height};
-      if(quality>.48) quality-=.08;else{quality=.68;maxSide=Math.round(maxSide*.82);}
+      blob=await encode(.60);
+      if(blob.size<=MAX_BYTES){
+        let best=blob,low=.60,high=.96;
+        for(let i=0;i<7;i++){
+          const quality=(low+high)/2, candidate=await encode(quality);
+          if(candidate.size<=MAX_BYTES){best=candidate;low=quality;}else high=quality;
+        }
+        return {blob:best,width,height};
+      }
+      maxSide=Math.round(Math.max(width,height)*.82);
     }
-    throw new Error('400KB 이하로 압축하지 못했습니다.');
+    throw new Error('600KB 이하로 압축하지 못했습니다.');
   }
   function drawLogo(ctx,width,height){
     const scale=Math.max(.75,Math.min(width,height)/900),pad=Math.round(18*scale),fontSize=Math.round(27*scale);
