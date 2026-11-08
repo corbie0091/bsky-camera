@@ -31,14 +31,19 @@
     .quality-options{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.quality label{position:relative;cursor:pointer}.quality input{position:absolute;opacity:0}.quality span{display:flex;align-items:center;justify-content:center;min-height:42px;border:1px solid var(--line);border-radius:9px;font-size:13px;font-weight:700;color:var(--ink);background:#fff}.quality input:checked+span{background:#EBF6ED;color:#1b7130;border:2px solid #27A745}.quality input:focus-visible+span{outline:3px solid #82C88E;outline-offset:2px}.quality:disabled{opacity:.6}
     .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:1000;width:max-content;max-width:calc(100vw - 36px);padding:12px 18px;border-radius:10px;background:rgba(21,45,69,.95);color:#fff;font-size:13px;line-height:1.5;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.16)}
     .zoom-controls{display:flex;gap:8px;justify-content:center;align-items:center;margin:12px 0 0}.zoom-controls button{min-height:40px;min-width:58px;padding:0 12px;border:1px solid #D9E2EC;border-radius:20px;background:#fff;color:#152D45;font-size:13px}.zoom-controls button[aria-pressed="true"]{border-color:#27A745;background:#EBF6ED;color:#1b7130}.zoom-controls button:disabled{opacity:.38}.zoom-value{min-width:48px;text-align:center;font-size:13px;font-weight:700;color:#152D45}.zoom-hint{font-size:12px;color:#63758A;text-align:center;margin:6px 0 0;line-height:1.4}.view{touch-action:pan-y}.camera-canvas{touch-action:none}
+    .mode-nav{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 18px}.mode-nav a{min-height:46px;display:flex;align-items:center;justify-content:center;border:1px solid #D9E2EC;border-radius:10px;color:#63758A;background:#fff;text-decoration:none;font-size:15px;font-weight:700}.mode-nav a[aria-current="page"]{color:#1b7130;background:#EBF6ED;border:2px solid #27A745}.app[data-mode="additional"] .mode-nav a[aria-current="page"]{color:#812091;background:#F5EAF7;border-color:#9C27B0}.app[data-mode="additional"] .subtitle,.app[data-mode="additional"] .heading{color:#812091}.app[data-mode="additional"] .capture{background:#812091}.app[data-mode="additional"] .quality input:checked+span,.app[data-mode="additional"] .zoom-controls button[aria-pressed="true"]{background:#F5EAF7;color:#812091;border-color:#9C27B0}.app[data-mode="additional"] .quality input:focus-visible+span{outline-color:#D9A3E2}
     dialog{border:1px solid var(--line);border-radius:14px;padding:24px;width:min(90%,380px);text-align:center;color:var(--ink)}dialog::backdrop{background:#152D4599}dialog h2{font-size:19px;margin:0 0 10px}dialog p{font-size:14px;line-height:1.6;color:var(--muted)}.dialog-actions{display:flex;gap:10px;margin-top:18px}.dialog-actions button{flex:1}
   
   </style>
 </head>
 <body>
-<div class="app">
-  <header><div class="brand">비스카이</div><div class="subtitle">전환 사진 촬영 및 저장</div></header>
+<div class="app" id="app" data-mode="conversion">
+  <header><div class="brand">비스카이</div><div class="subtitle" id="subtitle">전환 사진 촬영 및 저장</div></header>
   <main>
+    <nav class="mode-nav" aria-label="촬영 유형 선택">
+      <a id="conversionLink" href="#/conversion" aria-current="page">전환</a>
+      <a id="additionalLink" href="#/additional-order">추가주문</a>
+    </nav>
     <fieldset class="quality" id="qualityField"><legend>사진 용량 선택 <small>(촬영 전 선택)</small></legend><div class="quality-options">
       <label><input type="radio" name="quality" value="100" checked><span>100KB</span></label>
       <label><input type="radio" name="quality" value="300"><span>300KB</span></label>
@@ -92,9 +97,54 @@
   const video=$('video'), cameraCanvas=$('cameraCanvas'), preview=$('preview'), overlay=$('overlay'), overlayText=$('overlayText');
   const capture=$('capture'), save=$('save'), share=$('share'), retake=$('retake'), retry=$('retry'), fallback=$('fallback'), input=$('cameraInput'), statusEl=$('status');
   let stream=null, photo=null, photoUrl=null, starting=false, capturedAt=null;
+  let currentMode=location.hash==='#/additional-order'?'additional':'conversion';
+  let processingPhoto=false,originalCapture=null,lastResultInfo='';
+  const modeName=()=>currentMode==='additional'?'추가주문':'전환';
+  function applyModeUI(){
+    $('app').dataset.mode=currentMode;
+    $('subtitle').textContent=modeName()+' 사진 촬영 및 저장';
+    document.title='비스카이 '+modeName()+' 사진 촬영';
+    $('conversionLink').setAttribute('aria-current',currentMode==='conversion'?'page':'false');
+    $('additionalLink').setAttribute('aria-current',currentMode==='additional'?'page':'false');
+    capture.textContent=modeName()+' 사진 촬영하기';
+    $('heading').textContent=photo?modeName()+' 사진을 확인해 주세요':modeName()+' 사진을 촬영해 주세요';
+  }
+  function showModeNotice(message){
+    qualityToast.textContent=message;clearTimeout(toastTimer);qualityToast.hidden=false;
+    toastTimer=setTimeout(()=>{qualityToast.hidden=true;},2800);
+  }
+  async function applyRoute(){
+    const next=location.hash==='#/additional-order'?'additional':'conversion';
+    if(next===currentMode) return;
+    if(processingPhoto){
+      history.replaceState(null,'',currentMode==='additional'?'#/additional-order':'#/conversion');
+      showModeNotice('사진 처리가 끝난 후 촬영 유형을 변경해 주세요.');return;
+    }
+    const previous=currentMode;
+    currentMode=next;applyModeUI();
+    if(!photo || !originalCapture) return;
+    processingPhoto=true;save.disabled=true;share.disabled=true;retake.disabled=true;
+    statusEl.textContent=modeName()+' 사진으로 변경하고 있습니다...';
+    try{
+      const result=await compress(originalCapture.source,originalCapture.width,originalCapture.height);
+      const replacement=new File([result.blob],'bsky-photo.jpg',{type:'image/jpeg'});
+      const oldUrl=photoUrl,newUrl=URL.createObjectURL(replacement);
+      photo=replacement;photoUrl=newUrl;preview.src=newUrl;
+      if(oldUrl)URL.revokeObjectURL(oldUrl);
+      lastResultInfo=`JPEG · ${(photo.size/1024).toFixed(1)}KB · ${result.width} × ${result.height}px`;
+      statusEl.textContent=modeName()+' 사진 · '+lastResultInfo;
+    }catch(error){
+      console.error(error);currentMode=previous;applyModeUI();
+      history.replaceState(null,'',previous==='additional'?'#/additional-order':'#/conversion');
+      statusEl.textContent='촬영 유형을 변경하지 못했습니다. 다시 시도해 주세요.';
+    }finally{processingPhoto=false;save.disabled=false;share.disabled=false;retake.disabled=false;}
+  }
+  window.addEventListener('hashchange',applyRoute);
+
   const qualityField=$('qualityField');
   const qualityToast=$('qualityToast');let toastTimer;
   function showQualityToast(){
+    qualityToast.textContent='용량을 변경하려면 다시 촬영하기를 누르고 진행해 주세요.';
     clearTimeout(toastTimer);qualityToast.hidden=false;
     toastTimer=setTimeout(()=>{qualityToast.hidden=true;},2800);
   }
@@ -174,6 +224,7 @@
   view.addEventListener('touchend',event=>{if(event.touches.length<2)pinchStart=null;},{passive:true});
   view.addEventListener('touchcancel',()=>{pinchStart=null;},{passive:true});
   updateZoom();
+  applyModeUI();
   let previewFrame=null;
   function stopPreview(){if(previewFrame!==null){cancelAnimationFrame(previewFrame);previewFrame=null;}}
   function startPreview(){
@@ -223,13 +274,16 @@
       if(document.fonts && document.fonts.load){try{await Promise.all([document.fonts.load('700 32px Paperlogy'),document.fonts.load('400 24px Paperlogy')]);}catch(error){console.warn('글꼴을 불러오지 못해 기본 글꼴을 사용합니다.',error);}}
       const result=await compress(source,width,height);
       photo=new File([result.blob],'bsky-photo.jpg',{type:'image/jpeg'});
+      originalCapture={source,width,height};
       qualityField.disabled=false;
       if(photoUrl) URL.revokeObjectURL(photoUrl);
       photoUrl=URL.createObjectURL(photo); preview.src=photoUrl; preview.hidden=false; cameraCanvas.hidden=true; overlay.hidden=true;
       capture.hidden=true; zoomPanel.hidden=true; save.hidden=false; share.hidden=false; retake.hidden=false;
-      $('heading').textContent='사진을 확인해 주세요';
-      statusEl.textContent=`JPEG · ${(photo.size/1024).toFixed(1)}KB · ${result.width} × ${result.height}px`;
+      $('heading').textContent=modeName()+' 사진을 확인해 주세요';
+      lastResultInfo=`JPEG · ${(photo.size/1024).toFixed(1)}KB · ${result.width} × ${result.height}px`;
+      statusEl.textContent=lastResultInfo;
     } catch(e){console.error(e);statusEl.textContent='사진 처리에 실패했습니다. 다시 촬영해 주세요.';capture.disabled=!stream;qualityField.disabled=false;}
+    finally{processingPhoto=false;}
   }
   let kakaoMapsPromise;
   function loadKakaoMaps(){
@@ -276,8 +330,9 @@
     });
   }
   capture.addEventListener('click',async()=>{
-    if(capture.disabled || zoomBusy) return;
-    if(!video.videoWidth || !video.videoHeight){statusEl.textContent='카메라가 준비될 때까지 잠시 기다려 주세요.';return;}
+    if(capture.disabled || zoomBusy || processingPhoto) return;
+    processingPhoto=true;
+    if(!video.videoWidth || !video.videoHeight){processingPhoto=false;statusEl.textContent='카메라가 준비될 때까지 잠시 기다려 주세요.';return;}
     capture.disabled=true;qualityField.disabled=true;statusEl.textContent='사진을 촬영하고 있습니다...';
     const photoTime=new Date(), locationPromise=getApproxLocation();
     photoDigitalZoom=digitalZoom;
@@ -305,12 +360,12 @@
   retry.addEventListener('click',startCamera);
   fallback.addEventListener('click',()=>{input.value='';input.click();});
   input.addEventListener('change',()=>{
-    const file=input.files && input.files[0]; if(!file) return;
-    photoDigitalZoom=1;
+    const file=input.files && input.files[0]; if(!file || processingPhoto) return;
+    processingPhoto=true;photoDigitalZoom=1;
     const photoTime=new Date(),locationPromise=getApproxLocation();
     const url=URL.createObjectURL(file), image=new Image();
     image.onload=()=>{URL.revokeObjectURL(url);processImage(image,image.naturalWidth,image.naturalHeight,photoTime,locationPromise);};
-    image.onerror=()=>{URL.revokeObjectURL(url);statusEl.textContent='사진을 불러오지 못했습니다. 다시 시도해 주세요.';}; image.src=url;
+    image.onerror=()=>{URL.revokeObjectURL(url);processingPhoto=false;statusEl.textContent='사진을 불러오지 못했습니다. 다시 시도해 주세요.';}; image.src=url;
   });
   function showMessage(title,message){
     $('dialogTitle').textContent=title; $('dialogMessage').textContent=message;
@@ -356,8 +411,8 @@
   });
   retake.addEventListener('click',()=>reset(''));
   function reset(message){
-    if(photoUrl) URL.revokeObjectURL(photoUrl); photoUrl=null;photo=null;preview.removeAttribute('src');preview.hidden=true;cameraCanvas.hidden=false;
-    capture.hidden=false;zoomPanel.hidden=false;save.hidden=true;share.hidden=true;retake.hidden=true;input.value='';$('heading').textContent='전환 사진을 촬영해 주세요';
+    if(photoUrl) URL.revokeObjectURL(photoUrl); photoUrl=null;photo=null;originalCapture=null;lastResultInfo='';preview.removeAttribute('src');preview.hidden=true;cameraCanvas.hidden=false;
+    capture.hidden=false;zoomPanel.hidden=false;save.hidden=true;share.hidden=true;retake.hidden=true;input.value='';$('heading').textContent=modeName()+' 사진을 촬영해 주세요';
     qualityField.disabled=false;qualityToast.hidden=true;clearTimeout(toastTimer);statusEl.textContent=message;capture.disabled=!stream || !stream.active;
     if(!stream || !stream.active) startCamera();
   }
@@ -401,14 +456,15 @@
     // 전환 표시와 로고는 사진의 양쪽 위에서 같은 여백을 유지합니다.
     const badgeFont=Math.max(12,Math.round(width*.038));
     ctx.save();ctx.font=`700 ${badgeFont}px Paperlogy, sans-serif`;
-    const badgeHeight=width*.071,badgeWidth=ctx.measureText('전환').width+width*.035;
+    const badgeText=modeName();
+    const badgeHeight=width*.071,badgeWidth=ctx.measureText(badgeText).width+width*.035;
     const radius=Math.min(width*.012,badgeHeight/2),bx=edge,by=height*.028;
-    ctx.fillStyle='#58A65B';ctx.beginPath();ctx.moveTo(bx+radius,by);
+    ctx.fillStyle=currentMode==='additional'?'#9C27B0':'#58A65B';ctx.beginPath();ctx.moveTo(bx+radius,by);
     ctx.arcTo(bx+badgeWidth,by,bx+badgeWidth,by+badgeHeight,radius);
     ctx.arcTo(bx+badgeWidth,by+badgeHeight,bx,by+badgeHeight,radius);
     ctx.arcTo(bx,by+badgeHeight,bx,by,radius);ctx.arcTo(bx,by,bx+badgeWidth,by,radius);
     ctx.closePath();ctx.fill();ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText('전환',bx+badgeWidth/2,by+badgeHeight/2);ctx.restore();
+    ctx.fillText(badgeText,bx+badgeWidth/2,by+badgeHeight/2);ctx.restore();
     ctx.textBaseline='middle';ctx.fillStyle='#fff';
     ctx.font=`700 ${timeFont}px Paperlogy, sans-serif`;
     const timeLimit=panelWidth*.34;
