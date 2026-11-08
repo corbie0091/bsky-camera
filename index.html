@@ -82,7 +82,7 @@
       <button type="button" class="retake" id="retake" hidden>다시 촬영</button>
     </div>
     <p class="status" id="status" role="status" aria-live="polite"></p>
-    <p class="tip">정사각형 사진에 시간, 날짜, 대략적인 도로명 주소와 로고가 표시됩니다. 주소 확인을 위해 위치 정보가 카카오맵으로 전송됩니다. 위치를 확인할 수 없으면 주소 확인 불가로 표시됩니다. GPS 오차에 따라 실제 주소와 다를 수 있습니다.<br>아이폰에서는 저장하기를 누른 후 공유창에서 이미지 저장을 선택해 주세요. 다른 기기에서는 사진이 다운로드될 수 있습니다. 사진은 기기에서 처리됩니다.</p>
+    <p class="tip">정사각형 사진에 시간, 날짜, 대략적인 도로명 주소와 로고가 표시됩니다. 주소 확인을 위해 위치 정보가 카카오맵으로 전송됩니다. 위치를 확인할 수 없으면 주소 확인 불가로 표시됩니다. 정확도가 낮으면 잘못된 주소 대신 위치 정확도 낮음으로 표시됩니다. GPS 오차에 따라 실제 주소와 다를 수 있습니다.<br>아이폰에서는 저장하기를 누른 후 공유창에서 이미지 저장을 선택해 주세요. 다른 기기에서는 사진이 다운로드될 수 있습니다. 사진은 기기에서 처리됩니다.</p>
   </main>
   <footer>BSKY · 현장 사진 관리</footer>
 </div>
@@ -270,7 +270,7 @@
     capturedAt=photoTime || new Date();
     maxBytes=Number(document.querySelector('input[name="quality"]:checked').value)*1024;
     qualityField.disabled=true;
-    capture.disabled=true; statusEl.textContent='사진을 처리하고 있습니다...';
+    capture.disabled=true; statusEl.textContent='위치를 확인하고 사진을 처리하고 있습니다...';
     try {
       locationText=await locationPromise;
       if(!logoImage.complete) await new Promise(resolve=>{logoImage.onload=resolve;logoImage.onerror=resolve;});
@@ -311,44 +311,64 @@
     locationAccuracy=null;
     return new Promise(resolve=>{
       if(!navigator.geolocation){resolve('주소 확인 불가');return;}
-      let finished=false;
-      const finish=value=>{if(!finished){finished=true;clearTimeout(timer);resolve(value);}};
+      let finished=false,settled=false,watchId=null,best=null,settleTimer=null;
+      function stopWatching(){
+        if(settleTimer!==null){clearTimeout(settleTimer);settleTimer=null;}
+        if(watchId!==null && navigator.geolocation.clearWatch){navigator.geolocation.clearWatch(watchId);watchId=null;}
+      }
+      const finish=value=>{if(!finished){finished=true;clearTimeout(timer);stopWatching();resolve(value);}};
       const timer=setTimeout(()=>finish('주소 확인 불가'),25000);
-      async function onPosition(pos){
-        if(finished) return;
+      async function useBestPosition(){
+        if(finished || settled) return;
+        settled=true;stopWatching();
+        if(!best){finish('주소 확인 불가');return;}
+        const {latitude:lat,longitude:lon,accuracy}=best.coords;
+        if(!Number.isFinite(lat)||!Number.isFinite(lon)||!Number.isFinite(accuracy)){finish('위치 정확도 확인 불가');return;}
+        locationAccuracy=Math.round(accuracy);
+        if(accuracy>100){finish('위치 정확도 낮음');return;}
         try{
-          const lat=pos.coords.latitude,lon=pos.coords.longitude;
-          if(!Number.isFinite(lat)||!Number.isFinite(lon)) throw new Error('잘못된 위치');
-          if(Number.isFinite(pos.coords.accuracy)) locationAccuracy=Math.round(pos.coords.accuracy);
           const maps=await loadKakaoMaps();
           if(finished) return;
           const geocoder=new maps.services.Geocoder();
+          const approximate=accuracy>30?'약 ':'';
           geocoder.coord2Address(lon,lat,(result,status)=>{
             if(finished) return;
             if(status===maps.services.Status.OK && result && result.length){
               const road=formatRoadAddress(result[0].road_address);
-              if(road){finish(road);return;}
+              if(road){finish(approximate+road);return;}
               const address=result[0].address;
-              if(address && address.address_name){finish(address.address_name);return;}
+              if(address && address.address_name){finish(approximate+address.address_name);return;}
             }
             geocoder.coord2RegionCode(lon,lat,(regions,regionStatus)=>{
               if(regionStatus===maps.services.Status.OK && regions && regions.length){
                 const area=regions.find(item=>item.region_type==='H')||regions[0];
                 const label=[area.region_2depth_name,area.region_3depth_name].filter(Boolean).join(' ');
-                finish(label||'주소 확인 불가');
+                finish(label?approximate+label:'주소 확인 불가');
               }else finish('주소 확인 불가');
             });
           });
         }catch(error){finish('주소 확인 불가');}
       }
-      function onPreciseError(error){
-        if(finished) return;
-        if(error && error.code===1){finish('주소 확인 불가');return;}
-        try{navigator.geolocation.getCurrentPosition(onPosition,()=>finish('주소 확인 불가'),{enableHighAccuracy:false,timeout:5000,maximumAge:60000});}
-        catch(error){finish('주소 확인 불가');}
+      function onPosition(pos){
+        if(finished || settled || !pos || !pos.coords) return;
+        const accuracy=pos.coords.accuracy;
+        if(!Number.isFinite(accuracy)) return;
+        if(!best || accuracy<best.coords.accuracy) best=pos;
+        if(accuracy<=30){useBestPosition();return;}
+        if(settleTimer===null) settleTimer=setTimeout(useBestPosition,7000);
       }
-      try{navigator.geolocation.getCurrentPosition(onPosition,onPreciseError,{enableHighAccuracy:true,timeout:12000,maximumAge:0});}
-      catch(error){finish('주소 확인 불가');}
+      function onError(error){
+        if(finished || settled) return;
+        if(error && error.code===1){finish('위치 권한 필요');return;}
+        if(best) useBestPosition();else finish('주소 확인 불가');
+      }
+      const options={enableHighAccuracy:true,timeout:15000,maximumAge:0};
+      try{
+        if(typeof navigator.geolocation.watchPosition==='function'){
+          watchId=navigator.geolocation.watchPosition(onPosition,onError,options);
+          if(finished || settled) stopWatching();
+        }else navigator.geolocation.getCurrentPosition(onPosition,onError,options);
+      }catch(error){finish('주소 확인 불가');}
     });
   }
   function imageFromBlob(blob){
