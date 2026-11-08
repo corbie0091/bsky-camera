@@ -11,8 +11,8 @@
     header{background:linear-gradient(120deg,#053ca3,#2584f0);color:#fff;padding:18px 20px}
     .brand{font-size:22px;font-weight:850;letter-spacing:-.6px}.subtitle{font-size:13px;opacity:.9;margin-top:4px}
     main{padding:18px;flex:1;display:flex;flex-direction:column}.heading{font-size:16px;font-weight:750;margin:0 0 12px}
-    .view{position:relative;width:min(100%,65dvh);align-self:center;aspect-ratio:1/1;overflow:hidden;background:#121c2c;border-radius:16px;display:flex;align-items:center;justify-content:center}
-    video,img{width:100%;height:100%;object-fit:cover} video[hidden],img[hidden],[hidden]{display:none!important}
+    .view{position:relative;width:min(100%,65dvh);align-self:center;flex:0 0 auto;min-height:0;aspect-ratio:1/1;overflow:hidden;background:#121c2c;border-radius:16px;display:flex;align-items:center;justify-content:center}
+    video,img{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:cover;object-position:center} video[hidden],img[hidden],[hidden]{display:none!important}
     .overlay{position:absolute;inset:0;color:white;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:24px;background:#182639;gap:12px;line-height:1.6;font-size:14px}
     .overlay svg{opacity:.85}.overlay p{margin:0}.overlay button{min-height:44px;background:#fff;color:#053ca3}
     button{border:0;border-radius:12px;min-height:52px;padding:0 14px;font-size:15px;font-weight:750;cursor:pointer}
@@ -71,6 +71,15 @@
   const capture=$('capture'), save=$('save'), share=$('share'), retake=$('retake'), retry=$('retry'), fallback=$('fallback'), input=$('cameraInput'), statusEl=$('status');
   let stream=null, photo=null, photoUrl=null, starting=false, capturedAt=null;
   const qualityField=$('qualityField');
+  function waitForCameraFrame(){
+    return new Promise(resolve=>{
+      let done=false;
+      const finish=()=>{if(done)return;done=true;clearTimeout(timer);video.removeEventListener('loadeddata',onReady);resolve();};
+      const onReady=()=>{if(typeof video.requestVideoFrameCallback==='function')video.requestVideoFrameCallback(finish);else finish();};
+      const timer=setTimeout(finish,1800);
+      if(video.readyState>=2) onReady();else video.addEventListener('loadeddata',onReady,{once:true});
+    });
+  }
   async function startCamera(){
     if(starting || (stream && stream.active)) return;
     starting=true; capture.disabled=true; retry.hidden=true; fallback.hidden=true; overlay.hidden=false;
@@ -79,7 +88,7 @@
       if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('unsupported');
       try { stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:3840},height:{ideal:2160}},audio:false}); }
       catch(e){ if(e.name==='OverconstrainedError') stream=await navigator.mediaDevices.getUserMedia({video:true,audio:false}); else throw e; }
-      video.srcObject=stream; await video.play(); overlay.hidden=true; capture.disabled=false;
+      video.srcObject=stream; await video.play(); await waitForCameraFrame(); overlay.hidden=true; capture.disabled=false;
       statusEl.textContent='';
     }catch(e){
       if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}
