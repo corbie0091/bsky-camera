@@ -20,6 +20,7 @@
     .capture{grid-column:1/-1;color:#fff;background:#2584f0}.save{color:white;background:#053ca3}.share{color:white;background:#2584f0}.retake{grid-column:1/-1;color:#344054;background:#eef2f7;min-height:44px}
     .status{min-height:20px;font-size:13px;line-height:1.5;color:#475467;text-align:center;margin:12px 0 0}.tip{font-size:12px;line-height:1.6;color:#667085;margin:12px 2px 0}
     footer{text-align:center;padding:14px;border-top:1px solid #f0f2f5;color:#98a2b3;font-size:11px}
+    .quality{border:0;padding:0;margin:0 0 14px;min-width:0}.quality legend{font-size:14px;font-weight:750;margin-bottom:8px}.quality-options{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.quality label{position:relative}.quality input{position:absolute;opacity:0}.quality span{display:flex;align-items:center;justify-content:center;min-height:40px;border:1px solid #d0d9e8;border-radius:10px;font-size:13px;font-weight:700;color:#41526c}.quality input:checked+span{background:#053ca3;color:white;border-color:#053ca3}.quality input:focus-visible+span{outline:3px solid #68a8ff;outline-offset:2px}.quality:disabled{opacity:.6}
     dialog{border:0;border-radius:18px;padding:24px;width:min(90%,380px);box-shadow:0 16px 48px #0004;text-align:center;color:#172033}dialog::backdrop{background:#0009}dialog h2{font-size:19px;margin:0 0 10px}dialog p{font-size:14px;line-height:1.6;color:#475467}.dialog-actions{display:flex;gap:10px;margin-top:18px}.dialog-actions button{flex:1}
   </style>
 </head>
@@ -27,6 +28,12 @@
 <div class="app">
   <header><div class="brand">비스카이</div><div class="subtitle">현장 사진 촬영 및 저장</div></header>
   <main>
+    <fieldset class="quality" id="qualityField"><legend>사진 용량 선택 <small>(촬영 전 선택)</small></legend><div class="quality-options">
+      <label><input type="radio" name="quality" value="100" checked><span>100KB</span></label>
+      <label><input type="radio" name="quality" value="300"><span>300KB</span></label>
+      <label><input type="radio" name="quality" value="600"><span>600KB</span></label>
+      <label><input type="radio" name="quality" value="1024"><span>1MB</span></label>
+    </div></fieldset>
     <p class="heading" id="heading">촬영할 대상을 화면에 맞춰 주세요</p>
     <div class="view">
       <video id="video" autoplay muted playsinline aria-label="카메라 미리보기"></video>
@@ -46,7 +53,7 @@
       <button type="button" class="retake" id="retake" hidden>다시 촬영</button>
     </div>
     <p class="status" id="status" role="status" aria-live="polite"></p>
-    <p class="tip">촬영한 사진에 비스카이 로고가 표시되며, JPEG 600KB 이하로 자동 조정됩니다.<br>저장하기를 누르면 사진이 다운로드됩니다. 저장 위치는 기기와 브라우저에 따라 다를 수 있습니다. 사진은 기기에서 처리되며 서버로 전송되지 않습니다.</p>
+    <p class="tip">선택한 용량 이하의 JPEG 사진에 시간, 날짜, 대략적인 위치와 로고가 표시됩니다. 위치를 허용하지 않으면 위치 확인 불가로 표시됩니다.<br>저장하기를 누르면 사진이 다운로드됩니다. 저장 위치는 기기와 브라우저에 따라 다를 수 있습니다. 사진은 기기에서 처리되며 서버로 전송되지 않습니다.</p>
   </main>
   <footer>BSKY · 현장 사진 관리</footer>
 </div>
@@ -55,13 +62,15 @@
   <p id="dialogMessage">다운로드를 시작했습니다. 갤러리 또는 내 파일의 다운로드 폴더에서 사진을 확인해 주세요.</p>
   <div class="dialog-actions"><button type="button" class="save" id="confirmPhoto">확인하기</button><button type="button" class="retake" id="closeDialog">닫기</button></div>
 </dialog>
-<script src="./bsky-share.js"></script>
 <script>
-  const MAX_BYTES=600*1024;
+  const logoImage=new Image();
+  logoImage.src='data:image/png;base64,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';
+  let maxBytes=100*1024, locationText='위치 확인 불가';
   const $=id=>document.getElementById(id);
   const video=$('video'), preview=$('preview'), overlay=$('overlay'), overlayText=$('overlayText');
   const capture=$('capture'), save=$('save'), share=$('share'), retake=$('retake'), retry=$('retry'), fallback=$('fallback'), input=$('cameraInput'), statusEl=$('status');
   let stream=null, photo=null, photoUrl=null, starting=false, capturedAt=null;
+  const qualityField=$('qualityField');
   async function startCamera(){
     if(starting || (stream && stream.active)) return;
     starting=true; capture.disabled=true; retry.hidden=true; fallback.hidden=true; overlay.hidden=false;
@@ -81,10 +90,14 @@
       overlayText.textContent=message; retry.hidden=false; fallback.hidden=false;
     }finally{starting=false;}
   }
-  async function processImage(source,width,height){
-    capturedAt=new Date();
+  async function processImage(source,width,height,photoTime,locationPromise){
+    capturedAt=photoTime || new Date();
+    maxBytes=Number(document.querySelector('input[name="quality"]:checked').value)*1024;
+    qualityField.disabled=true;
     capture.disabled=true; statusEl.textContent='사진을 처리하고 있습니다...';
     try {
+      locationText=await locationPromise;
+      if(!logoImage.complete) await new Promise(resolve=>{logoImage.onload=resolve;logoImage.onerror=resolve;});
       const result=await compress(source,width,height);
       photo=new File([result.blob],'bsky-photo.jpg',{type:'image/jpeg'});
       if(photoUrl) URL.revokeObjectURL(photoUrl);
@@ -92,7 +105,21 @@
       capture.hidden=true; save.hidden=false; share.hidden=false; retake.hidden=false;
       $('heading').textContent='사진을 확인해 주세요';
       statusEl.textContent=`JPEG · ${(photo.size/1024).toFixed(1)}KB · ${result.width} × ${result.height}px`;
-    } catch(e){console.error(e);statusEl.textContent='사진 처리에 실패했습니다. 다시 촬영해 주세요.';capture.disabled=!stream;}
+    } catch(e){console.error(e);statusEl.textContent='사진 처리에 실패했습니다. 다시 촬영해 주세요.';capture.disabled=!stream;qualityField.disabled=false;}
+  }
+  function getApproxLocation(){
+    return new Promise(resolve=>{
+      if(!navigator.geolocation){resolve('위치 확인 불가');return;}
+      let finished=false;
+      const finish=value=>{if(!finished){finished=true;clearTimeout(timer);resolve(value);}};
+      const timer=setTimeout(()=>finish('위치 확인 불가'),8000);
+      try{navigator.geolocation.getCurrentPosition(pos=>{
+        const lat=pos.coords.latitude,lon=pos.coords.longitude;
+        if(!Number.isFinite(lat)||!Number.isFinite(lon)){finish('위치 확인 불가');return;}
+        finish(`대략적 위치  ${lat.toFixed(2)}, ${lon.toFixed(2)}`);
+      },()=>finish('위치 확인 불가'),{enableHighAccuracy:false,timeout:7000,maximumAge:60000});}
+      catch(error){finish('위치 확인 불가');}
+    });
   }
   function imageFromBlob(blob){
     return new Promise((resolve,reject)=>{
@@ -105,7 +132,8 @@
   capture.addEventListener('click',async()=>{
     if(capture.disabled) return;
     if(!video.videoWidth || !video.videoHeight){statusEl.textContent='카메라가 준비될 때까지 잠시 기다려 주세요.';return;}
-    capture.disabled=true;statusEl.textContent='사진을 촬영하고 있습니다...';
+    capture.disabled=true;qualityField.disabled=true;statusEl.textContent='사진을 촬영하고 있습니다...';
+    const photoTime=new Date(), locationPromise=getApproxLocation();
     let source=video,width=video.videoWidth,height=video.videoHeight;
     try{
       const track=stream && stream.getVideoTracks()[0];
@@ -123,14 +151,17 @@
         source=image;width=image.naturalWidth;height=image.naturalHeight;
       }
     }catch(error){console.warn('고해상도 사진 촬영이 지원되지 않아 카메라 영상으로 촬영합니다.',error);}
-    await processImage(source,width,height);
+    // 위치 권한을 기다리는 동안 영상이 바뀌지 않도록 현재 프레임을 고정합니다.
+    if(source===video){const still=document.createElement('canvas');still.width=width;still.height=height;still.getContext('2d').drawImage(video,0,0,width,height);source=still;}
+    await processImage(source,width,height,photoTime,locationPromise);
   });
   retry.addEventListener('click',startCamera);
   fallback.addEventListener('click',()=>{input.value='';input.click();});
   input.addEventListener('change',()=>{
     const file=input.files && input.files[0]; if(!file) return;
+    const photoTime=new Date(),locationPromise=getApproxLocation();
     const url=URL.createObjectURL(file), image=new Image();
-    image.onload=()=>{URL.revokeObjectURL(url);processImage(image,image.naturalWidth,image.naturalHeight);};
+    image.onload=()=>{URL.revokeObjectURL(url);processImage(image,image.naturalWidth,image.naturalHeight,photoTime,locationPromise);};
     image.onerror=()=>{URL.revokeObjectURL(url);statusEl.textContent='사진을 불러오지 못했습니다. 다시 시도해 주세요.';}; image.src=url;
   });
   function showMessage(title,message){
@@ -152,19 +183,22 @@
   $('saveDialog').addEventListener('cancel',e=>{e.preventDefault();closeMessage();reset('');});
   share.addEventListener('click',async()=>{
     if(!photo) return;
-    if(!window.BskyShare){
-      showMessage('공유 기능을 불러오지 못했습니다','index.html과 bsky-share.js가 같은 폴더에 있는지 확인해 주세요.');return;
+    try{
+      if(typeof navigator.share!=='function' || (typeof navigator.canShare==='function' && !navigator.canShare({files:[photo]}))){
+        showMessage('공유할 수 없습니다','이 브라우저에서 사진 공유를 지원하지 않습니다. 저장 후 갤러리 또는 내 파일에서 공유해 주세요.');return;
+      }
+      await navigator.share({files:[photo]});
+      reset('공유 창에서 돌아왔습니다. 다음 사진을 촬영해 주세요.');
+    }catch(error){
+      if(error.name==='AbortError') statusEl.textContent='공유가 취소되었습니다. 사진을 확인하고 다시 시도해 주세요.';
+      else showMessage('공유할 수 없습니다','공유 창을 열지 못했습니다. 사진을 저장한 후 갤러리 또는 내 파일에서 공유해 주세요.');
     }
-    const result=await window.BskyShare.sharePhoto(photo);
-    if(result.status==='shared') reset('공유 창에서 돌아왔습니다. 다음 사진을 촬영해 주세요.');
-    else if(result.status==='cancelled') statusEl.textContent='공유가 취소되었습니다. 사진을 확인하고 다시 시도해 주세요.';
-    else showMessage('공유할 수 없습니다','이 브라우저에서 사진 공유 창을 열지 못했습니다. Chrome에서 다시 열거나, 사진을 저장한 뒤 갤러리 또는 내 파일에서 공유해 주세요.');
   });
   retake.addEventListener('click',()=>reset(''));
   function reset(message){
     if(photoUrl) URL.revokeObjectURL(photoUrl); photoUrl=null;photo=null;preview.removeAttribute('src');preview.hidden=true;video.hidden=false;
     capture.hidden=false;save.hidden=true;share.hidden=true;retake.hidden=true;input.value='';$('heading').textContent='촬영할 대상을 화면에 맞춰 주세요';
-    statusEl.textContent=message;capture.disabled=!stream || !stream.active;
+    qualityField.disabled=false;statusEl.textContent=message;capture.disabled=!stream || !stream.active;
     if(!stream || !stream.active) startCamera();
   }
   async function compress(source,sourceWidth,sourceHeight){
@@ -177,31 +211,41 @@
       const ctx=canvas.getContext('2d',{alpha:false});ctx.fillStyle='#fff';ctx.fillRect(0,0,width,height);ctx.drawImage(source,0,0,width,height);drawLogo(ctx,width,height);
       const encode=quality=>new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('JPEG 변환 실패')),'image/jpeg',quality));
       let blob=await encode(.96);
-      if(blob.size<=MAX_BYTES) return {blob,width,height};
+      if(blob.size<=maxBytes) return {blob,width,height};
       blob=await encode(.60);
-      if(blob.size<=MAX_BYTES){
+      if(blob.size<=maxBytes){
         let best=blob,low=.60,high=.96;
         for(let i=0;i<7;i++){
           const quality=(low+high)/2, candidate=await encode(quality);
-          if(candidate.size<=MAX_BYTES){best=candidate;low=quality;}else high=quality;
+          if(candidate.size<=maxBytes){best=candidate;low=quality;}else high=quality;
         }
         return {blob:best,width,height};
       }
       maxSide=Math.round(Math.max(width,height)*.82);
     }
-    throw new Error('600KB 이하로 압축하지 못했습니다.');
+    throw new Error('선택한 용량 이하로 압축하지 못했습니다.');
   }
   function drawLogo(ctx,width,height){
-    const scale=Math.max(.75,Math.min(width,height)/900),pad=Math.round(18*scale),fontSize=Math.round(27*scale);
-    ctx.save();ctx.font=`800 ${fontSize}px -apple-system, BlinkMacSystemFont, sans-serif`;
-    const boxW=ctx.measureText('비스카이').width+pad*1.5,boxH=fontSize+pad,x=Math.round(width*.025),y=Math.round(height*.035),r=Math.round(9*scale);
-    ctx.fillStyle='rgba(5,60,163,.88)';ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+boxW,y,x+boxW,y+boxH,r);ctx.arcTo(x+boxW,y+boxH,x,y+boxH,r);ctx.arcTo(x,y+boxH,x,y,r);ctx.arcTo(x,y,x+boxW,y,r);ctx.closePath();ctx.fill();
-    ctx.fillStyle='#fff';ctx.textBaseline='middle';ctx.fillText('비스카이',x+pad*.75,y+boxH/2+1);
-    const d=capturedAt || new Date(), z=n=>String(n).padStart(2,'0');
-    const stamp=`${d.getFullYear()}.${z(d.getMonth()+1)}.${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}:${z(d.getSeconds())}`;
-    ctx.font=`700 ${Math.max(14,Math.round(25*scale))}px -apple-system, BlinkMacSystemFont, sans-serif`;
-    ctx.textBaseline='bottom';ctx.lineWidth=Math.max(3,Math.round(4*scale));ctx.strokeStyle='rgba(0,0,0,.75)';ctx.lineJoin='round';
-    const tx=Math.round(width*.025),ty=height-Math.round(height*.025);ctx.strokeText(stamp,tx,ty);ctx.fillText(stamp,tx,ty);ctx.restore();
+    const d=capturedAt || new Date(),z=n=>String(n).padStart(2,'0');
+    const time=`${z(d.getHours())}:${z(d.getMinutes())}`;
+    const date=`${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`;
+    const x=width*.028, bottom=height*.97, timeFont=Math.max(18,Math.round(width*.078));
+    const dateFont=Math.max(12,Math.round(width*.031)),locFont=Math.max(11,Math.round(width*.026));
+    ctx.save();ctx.textBaseline='bottom';ctx.lineJoin='round';ctx.fillStyle='#fff';ctx.strokeStyle='rgba(0,0,0,.85)';ctx.lineWidth=Math.max(2,width*.004);
+    const lineY=bottom-locFont*1.35;
+    ctx.font=`700 ${timeFont}px -apple-system, BlinkMacSystemFont, sans-serif`;
+    ctx.strokeText(time,x,lineY);ctx.fillText(time,x,lineY);
+    const dateX=x+ctx.measureText(time).width+width*.025;
+    ctx.font=`700 ${dateFont}px -apple-system, BlinkMacSystemFont, sans-serif`;
+    ctx.strokeText(date,dateX,lineY+timeFont*.12);ctx.fillText(date,dateX,lineY+timeFont*.12);
+    ctx.font=`600 ${locFont}px -apple-system, BlinkMacSystemFont, sans-serif`;
+    ctx.strokeText(locationText,x,bottom);ctx.fillText(locationText,x,bottom);
+    if(logoImage.complete && logoImage.naturalWidth){
+      const logoWidth=width*.16,logoHeight=logoWidth*30/36,logoX=width-width*.025-logoWidth,logoY=bottom-logoHeight;
+      ctx.fillStyle='rgba(255,255,255,.95)';ctx.fillRect(logoX,logoY,logoWidth,logoHeight);
+      ctx.drawImage(logoImage,13,16,36,30,logoX,logoY,logoWidth,logoHeight);
+    }
+    ctx.restore();
   }
   window.addEventListener('pagehide',()=>{if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}});
   window.addEventListener('pageshow',event=>{if(event.persisted && !photo) startCamera();});
