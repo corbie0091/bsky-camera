@@ -119,7 +119,6 @@
     const d=capturedAt || new Date(),z=n=>String(n).padStart(2,'0');
     link.href=url;link.download=`bsky-${d.getFullYear()}${z(d.getMonth()+1)}${z(d.getDate())}-${z(d.getHours())}${z(d.getMinutes())}${z(d.getSeconds())}.jpg`;
     document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
-    showMessage('사진 저장 요청','다운로드를 시작했습니다. 갤러리 또는 내 파일의 다운로드 폴더에서 사진을 확인해 주세요.');
   });
   $('confirmPhoto').addEventListener('click',()=>{closeMessage();statusEl.textContent='갤러리 또는 내 파일의 다운로드 폴더에서 확인해 주세요.';});
   $('closeDialog').addEventListener('click',()=>{closeMessage();reset('');});
