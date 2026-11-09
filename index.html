@@ -624,19 +624,23 @@
     ctx.restore();
     const detailX=textX+timeWidth+width*.025;
     const detailWidth=Math.max(1,panelX+panelWidth-width*.018-detailX);
-    ctx.font=`700 ${detailFont}px Paperlogy, sans-serif`;
-    ctx.fillText(date,detailX,panelY+panelHeight*.27,detailWidth);
     const locationFont=Math.max(10,Math.round(width*.026));
     ctx.font=`400 ${locationFont}px Paperlogy, sans-serif`;
-    if(ctx.measureText(locationText).width<=detailWidth){
-      ctx.fillText(locationText,detailX,panelY+panelHeight*.73,detailWidth);
-    }else{
+    let locationLines=[locationText],locationYs=[panelY+panelHeight*.73];
+    if(ctx.measureText(locationText).width>detailWidth){
       const parts=locationText.split(', ');
       const midpoint=parts.length>2?2:Math.max(1,Math.ceil(parts.length/2));
       const line1=parts.slice(0,midpoint).join(', '),line2=parts.slice(midpoint).join(', ');
-      if(line2){ctx.fillText(line1,detailX,panelY+panelHeight*.64,detailWidth);ctx.fillText(line2,detailX,panelY+panelHeight*.90,detailWidth);}
-      else ctx.fillText(locationText,detailX,panelY+panelHeight*.73,detailWidth);
+      if(line2){locationLines=[line1,line2];locationYs=[panelY+panelHeight*.64,panelY+panelHeight*.90];}
     }
+    // 날짜와 주소를 함께 내려 주소의 마지막 줄을 시간 하단에 맞춥니다.
+    const lastIndex=locationLines.length-1;
+    const lastMetrics=ctx.measureText(locationLines[lastIndex]);
+    const detailOffset=Math.max(0,bottom-locationYs[lastIndex]-(lastMetrics.actualBoundingBoxDescent || 0));
+    ctx.font=`700 ${detailFont}px Paperlogy, sans-serif`;
+    ctx.fillText(date,detailX,panelY+panelHeight*.27+detailOffset,detailWidth);
+    ctx.font=`400 ${locationFont}px Paperlogy, sans-serif`;
+    locationLines.forEach((line,index)=>ctx.fillText(line,detailX,locationYs[index]+detailOffset,detailWidth));
     if(logoImage.complete && logoImage.naturalWidth){
       ctx.save();ctx.shadowColor='rgba(0,0,0,.65)';ctx.shadowBlur=width*.006;
       ctx.drawImage(logoImage,190,285,900,700,logoX,logoY,logoWidth,logoHeight);ctx.restore();
