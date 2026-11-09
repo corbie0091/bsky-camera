@@ -566,8 +566,8 @@
     const edge=width*.028,bottom=height*.965;
     const logoWidth=width*.063*Math.SQRT2,logoHeight=logoWidth*700/900;
     const logoX=width-edge-logoWidth,logoY=height*.028;
-    const panelX=edge,panelY=bottom-width*.145,panelWidth=width*.78,panelHeight=width*.145;
-    const textX=panelX+width*.018,timeFont=Math.max(20,Math.round(width*.082));
+    const panelX=edge,panelY=bottom-width*.145,panelWidth=width*.92,panelHeight=width*.145;
+    const textX=panelX+width*.018,timeFont=Math.max(20,Math.round(width*.12));
     const detailFont=Math.max(12,Math.round(width*.034));
     ctx.save();
     // 전환 표시와 로고는 사진의 양쪽 위에서 같은 여백을 유지합니다.
@@ -605,7 +605,7 @@
     }
     ctx.textBaseline='middle';ctx.fillStyle='#fff';
     ctx.font=`700 ${timeFont}px Paperlogy, sans-serif`;
-    const timeLimit=panelWidth*.34;
+    const timeLimit=width*.37;
     ctx.fillText(time,textX,panelY+panelHeight*.50,timeLimit);
     const timeWidth=Math.min(ctx.measureText(time).width,timeLimit);
     const detailX=textX+timeWidth+width*.025;
