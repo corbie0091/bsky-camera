@@ -293,9 +293,10 @@
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16);
       }
       .zoom-controls {
-        display: flex;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 8px;
-        justify-content: center;
+        justify-items: stretch;
         align-items: center;
         margin: 12px 0 0;
       }
@@ -571,6 +572,42 @@
             <button type="button" id="zoomHalf" aria-pressed="false" disabled>
               0.5×
             </button>
+            <button
+              type="button"
+              class="wide-zoom"
+              data-zoom="0.6"
+              aria-pressed="false"
+              disabled
+            >
+              0.6×
+            </button>
+            <button
+              type="button"
+              class="wide-zoom"
+              data-zoom="0.7"
+              aria-pressed="false"
+              disabled
+            >
+              0.7×
+            </button>
+            <button
+              type="button"
+              class="wide-zoom"
+              data-zoom="0.8"
+              aria-pressed="false"
+              disabled
+            >
+              0.8×
+            </button>
+            <button
+              type="button"
+              class="wide-zoom"
+              data-zoom="0.9"
+              aria-pressed="false"
+              disabled
+            >
+              0.9×
+            </button>
             <button type="button" id="zoomOne" aria-pressed="true">1×</button>
             <button type="button" id="zoomTwo" aria-pressed="false">2×</button>
             <span class="zoom-value" id="zoomValue" aria-live="polite"
@@ -809,16 +846,30 @@
         zoomTwo = $("zoomTwo"),
         zoomValue = $("zoomValue"),
         zoomHint = $("zoomHint");
+      const wideButtons = [
+        zoomHalf,
+        ...document.querySelectorAll(".wide-zoom"),
+      ];
+      zoomHalf.dataset.zoom = "0.5";
       let digitalZoom = 1,
-        photoDigitalZoom = 1,
-        wideAvailable = false,
-        wideActive = false,
+        photoDigitalZoom = 1;
+      let wideActive = false,
+        wideZoom = 1,
         zoomBusy = false,
         pinchStart = null;
+      let supportedWide = new Set();
+
       function updateZoom() {
-        const amount = wideActive ? 0.5 : digitalZoom;
+        const amount = wideActive ? wideZoom : digitalZoom;
         zoomValue.textContent = amount.toFixed(1) + "×";
-        zoomHalf.setAttribute("aria-pressed", String(wideActive));
+        wideButtons.forEach((button) => {
+          const value = Number(button.dataset.zoom);
+          button.disabled = zoomBusy || !supportedWide.has(value);
+          button.setAttribute(
+            "aria-pressed",
+            String(wideActive && Math.abs(wideZoom - value) < 0.03),
+          );
+        });
         zoomOne.setAttribute(
           "aria-pressed",
           String(!wideActive && Math.abs(digitalZoom - 1) < 0.03),
@@ -827,50 +878,55 @@
           "aria-pressed",
           String(!wideActive && Math.abs(digitalZoom - 2) < 0.03),
         );
-        zoomHalf.disabled = !wideAvailable || zoomBusy;
         zoomOne.disabled = zoomBusy;
         zoomTwo.disabled = zoomBusy;
-        zoomHint.textContent = wideAvailable
-          ? "두 손가락으로 확대·축소할 수 있습니다."
-          : "두 손가락으로 1~2배를 조절할 수 있습니다. 이 브라우저는 0.5배를 지원하지 않습니다.";
+        zoomHint.textContent = supportedWide.size
+          ? "두 손가락으로 확대·축소할 수 있습니다. 기기에서 지원하는 배율만 선택할 수 있습니다."
+          : "두 손가락으로 1~2배를 조절할 수 있습니다. 이 브라우저는 1배 미만 줌을 지원하지 않습니다.";
       }
       function inspectZoom() {
-        wideAvailable = false;
+        supportedWide = new Set();
         wideActive = false;
+        wideZoom = 1;
         digitalZoom = 1;
         try {
-          const track = stream && stream.getVideoTracks()[0],
-            cap =
-              track && track.getCapabilities && track.getCapabilities().zoom;
+          const track = stream && stream.getVideoTracks()[0];
+          const cap =
+            track && track.getCapabilities && track.getCapabilities().zoom;
           const current =
             track && track.getSettings && track.getSettings().zoom;
-          const fitsStep =
-            !cap ||
-            !cap.step ||
-            Math.abs(
-              (0.5 - cap.min) / cap.step -
-                Math.round((0.5 - cap.min) / cap.step),
-            ) < 0.001;
-          wideAvailable = !!(
+          if (
             cap &&
             Number.isFinite(cap.min) &&
-            cap.min <= 0.5 &&
+            Number.isFinite(cap.max) &&
             cap.max >= 1 &&
-            fitsStep &&
             Number.isFinite(current) &&
             Math.abs(current - 1) < 0.02 &&
             typeof track.applyConstraints === "function"
-          );
+          ) {
+            for (const button of wideButtons) {
+              const value = Number(button.dataset.zoom);
+              const steps = (value - cap.min) / cap.step;
+              const fitsStep =
+                !cap.step || Math.abs(steps - Math.round(steps)) < 0.001;
+              if (value >= cap.min && value <= cap.max && fitsStep)
+                supportedWide.add(value);
+            }
+          }
         } catch (error) {
-          wideAvailable = false;
+          supportedWide.clear();
         }
         updateZoom();
       }
-      async function useWide(enabled) {
+      async function setWideZoom(value) {
         if (zoomBusy || !stream || !stream.active || photo || capture.disabled)
           return false;
-        if (enabled && !wideAvailable) return false;
-        if (enabled === wideActive) return true;
+        if (value < 1 && !supportedWide.has(value)) return false;
+        if (
+          (wideActive && Math.abs(wideZoom - value) < 0.001) ||
+          (!wideActive && value === 1)
+        )
+          return true;
         const track = stream.getVideoTracks()[0];
         if (!track) return false;
         zoomBusy = true;
@@ -886,27 +942,27 @@
             .filter((part) => Object.keys(part).length);
           await track.applyConstraints({
             ...old,
-            advanced: [...advanced, { zoom: enabled ? 0.5 : 1 }],
+            advanced: [...advanced, { zoom: value }],
           });
           const actual = track.getSettings && track.getSettings().zoom;
-          if (
-            !Number.isFinite(actual) ||
-            Math.abs(actual - (enabled ? 0.5 : 1)) > 0.03
-          )
+          if (!Number.isFinite(actual) || Math.abs(actual - value) > 0.03)
             throw new Error("요청한 줌 비율을 제공하지 않습니다.");
-          wideActive = enabled;
+          wideActive = value < 1;
+          wideZoom = wideActive ? actual : 1;
           digitalZoom = 1;
           return true;
         } catch (error) {
-          if (enabled) wideAvailable = false;
+          if (value < 1) supportedWide.delete(value);
           const current = track.getSettings && track.getSettings().zoom;
           if (Number.isFinite(current)) {
-            wideActive = current < 0.8;
+            wideActive = current < 0.98;
+            wideZoom = wideActive ? current : 1;
             digitalZoom = 1;
           }
-          statusEl.textContent = enabled
-            ? "이 기기에서는 0.5배로 전환할 수 없습니다."
-            : "카메라 배율을 변경하지 못했습니다.";
+          statusEl.textContent =
+            value < 1
+              ? `이 기기에서는 ${value.toFixed(1)}배로 전환할 수 없습니다.`
+              : "카메라 배율을 변경하지 못했습니다.";
           return false;
         } finally {
           zoomBusy = false;
@@ -916,11 +972,15 @@
       async function setDigitalZoom(value) {
         if (photo || capture.disabled || zoomBusy || !stream || !stream.active)
           return;
-        if (wideActive && !(await useWide(false))) return;
+        if (wideActive && !(await setWideZoom(1))) return;
         digitalZoom = Math.max(1, Math.min(2, value));
         updateZoom();
       }
-      zoomHalf.addEventListener("click", () => useWide(true));
+      wideButtons.forEach((button) =>
+        button.addEventListener("click", () =>
+          setWideZoom(Number(button.dataset.zoom)),
+        ),
+      );
       zoomOne.addEventListener("click", () => setDigitalZoom(1));
       zoomTwo.addEventListener("click", () => setDigitalZoom(2));
       const view = document.querySelector(".view");
@@ -936,7 +996,7 @@
           if (event.touches.length === 2 && !photo && !capture.disabled) {
             pinchStart = {
               distance: touchDistance(event.touches),
-              zoom: wideActive ? 0.5 : digitalZoom,
+              zoom: wideActive ? wideZoom : digitalZoom,
             };
           }
         },
@@ -956,10 +1016,12 @@
           const distance = touchDistance(event.touches);
           if (!pinchStart.distance) return;
           const wanted = (pinchStart.zoom * distance) / pinchStart.distance;
-          if (wideActive) {
-            if (wanted >= 0.9) setDigitalZoom(1);
-          } else if (wanted < 0.8 && wideAvailable) {
-            useWide(true);
+          if (wanted < 0.95 && supportedWide.size) {
+            const candidates = [...supportedWide];
+            const closest = candidates.reduce((best, value) =>
+              Math.abs(value - wanted) < Math.abs(best - wanted) ? value : best,
+            );
+            setWideZoom(closest);
           } else setDigitalZoom(wanted);
         },
         { passive: false },
