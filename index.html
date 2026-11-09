@@ -638,7 +638,7 @@
     const lastMetrics=ctx.measureText(locationLines[lastIndex]);
     const detailOffset=Math.max(0,bottom-locationYs[lastIndex]-(lastMetrics.actualBoundingBoxDescent || 0));
     ctx.font=`700 ${detailFont}px Paperlogy, sans-serif`;
-    ctx.fillText(date,detailX,panelY+panelHeight*.27+detailOffset,detailWidth);
+    ctx.fillText(date,detailX,panelY+panelHeight*.27+detailOffset+height*.008,detailWidth);
     ctx.font=`400 ${locationFont}px Paperlogy, sans-serif`;
     locationLines.forEach((line,index)=>ctx.fillText(line,detailX,locationYs[index]+detailOffset,detailWidth));
     if(logoImage.complete && logoImage.naturalWidth){
