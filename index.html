@@ -293,10 +293,9 @@
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16);
       }
       .zoom-controls {
-        display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        display: flex;
         gap: 8px;
-        justify-items: stretch;
+        justify-content: center;
         align-items: center;
         margin: 12px 0 0;
       }
@@ -572,42 +571,6 @@
             <button type="button" id="zoomHalf" aria-pressed="false" disabled>
               0.5×
             </button>
-            <button
-              type="button"
-              class="wide-zoom"
-              data-zoom="0.6"
-              aria-pressed="false"
-              disabled
-            >
-              0.6×
-            </button>
-            <button
-              type="button"
-              class="wide-zoom"
-              data-zoom="0.7"
-              aria-pressed="false"
-              disabled
-            >
-              0.7×
-            </button>
-            <button
-              type="button"
-              class="wide-zoom"
-              data-zoom="0.8"
-              aria-pressed="false"
-              disabled
-            >
-              0.8×
-            </button>
-            <button
-              type="button"
-              class="wide-zoom"
-              data-zoom="0.9"
-              aria-pressed="false"
-              disabled
-            >
-              0.9×
-            </button>
             <button type="button" id="zoomOne" aria-pressed="true">1×</button>
             <button type="button" id="zoomTwo" aria-pressed="false">2×</button>
             <span class="zoom-value" id="zoomValue" aria-live="polite"
@@ -846,30 +809,40 @@
         zoomTwo = $("zoomTwo"),
         zoomValue = $("zoomValue"),
         zoomHint = $("zoomHint");
-      const wideButtons = [
-        zoomHalf,
-        ...document.querySelectorAll(".wide-zoom"),
-      ];
-      zoomHalf.dataset.zoom = "0.5";
       let digitalZoom = 1,
         photoDigitalZoom = 1;
       let wideActive = false,
         wideZoom = 1,
         zoomBusy = false,
         pinchStart = null;
-      let supportedWide = new Set();
+      let wideCapability = null,
+        pendingPinchZoom = null,
+        pinchZoomRunning = false;
 
+      function wideTarget(value) {
+        if (!wideCapability) return null;
+        const { min, max, step } = wideCapability;
+        const clamped = Math.max(Math.max(0.5, min), Math.min(1, max, value));
+        const rounded = step
+          ? min + Math.round((clamped - min) / step) * step
+          : clamped;
+        const result = Number(rounded.toFixed(6));
+        return result >= Math.max(0.5, min) - 0.000001 &&
+          result <= Math.min(1, max) + 0.000001
+          ? result
+          : null;
+      }
       function updateZoom() {
         const amount = wideActive ? wideZoom : digitalZoom;
         zoomValue.textContent = amount.toFixed(1) + "×";
-        wideButtons.forEach((button) => {
-          const value = Number(button.dataset.zoom);
-          button.disabled = zoomBusy || !supportedWide.has(value);
-          button.setAttribute(
-            "aria-pressed",
-            String(wideActive && Math.abs(wideZoom - value) < 0.03),
-          );
-        });
+        zoomHalf.disabled =
+          zoomBusy ||
+          wideTarget(0.5) === null ||
+          Math.abs(wideTarget(0.5) - 0.5) > 0.001;
+        zoomHalf.setAttribute(
+          "aria-pressed",
+          String(wideActive && Math.abs(wideZoom - 0.5) < 0.03),
+        );
         zoomOne.setAttribute(
           "aria-pressed",
           String(!wideActive && Math.abs(digitalZoom - 1) < 0.03),
@@ -880,12 +853,12 @@
         );
         zoomOne.disabled = zoomBusy;
         zoomTwo.disabled = zoomBusy;
-        zoomHint.textContent = supportedWide.size
-          ? "두 손가락으로 확대·축소할 수 있습니다. 기기에서 지원하는 배율만 선택할 수 있습니다."
+        zoomHint.textContent = wideCapability
+          ? "두 손가락으로 지원되는 배율을 조절할 수 있습니다."
           : "두 손가락으로 1~2배를 조절할 수 있습니다. 이 브라우저는 1배 미만 줌을 지원하지 않습니다.";
       }
       function inspectZoom() {
-        supportedWide = new Set();
+        wideCapability = null;
         wideActive = false;
         wideZoom = 1;
         digitalZoom = 1;
@@ -898,30 +871,31 @@
           if (
             cap &&
             Number.isFinite(cap.min) &&
+            cap.min < 1 &&
             Number.isFinite(cap.max) &&
             cap.max >= 1 &&
             Number.isFinite(current) &&
             Math.abs(current - 1) < 0.02 &&
             typeof track.applyConstraints === "function"
           ) {
-            for (const button of wideButtons) {
-              const value = Number(button.dataset.zoom);
-              const steps = (value - cap.min) / cap.step;
-              const fitsStep =
-                !cap.step || Math.abs(steps - Math.round(steps)) < 0.001;
-              if (value >= cap.min && value <= cap.max && fitsStep)
-                supportedWide.add(value);
-            }
+            wideCapability = {
+              min: cap.min,
+              max: cap.max,
+              step: Number.isFinite(cap.step) && cap.step > 0 ? cap.step : 0,
+            };
           }
         } catch (error) {
-          supportedWide.clear();
+          wideCapability = null;
         }
         updateZoom();
       }
       async function setWideZoom(value) {
         if (zoomBusy || !stream || !stream.active || photo || capture.disabled)
           return false;
-        if (value < 1 && !supportedWide.has(value)) return false;
+        if (value < 1) {
+          value = wideTarget(value);
+          if (value === null) return false;
+        }
         if (
           (wideActive && Math.abs(wideZoom - value) < 0.001) ||
           (!wideActive && value === 1)
@@ -947,21 +921,20 @@
           const actual = track.getSettings && track.getSettings().zoom;
           if (!Number.isFinite(actual) || Math.abs(actual - value) > 0.03)
             throw new Error("요청한 줌 비율을 제공하지 않습니다.");
-          wideActive = value < 1;
+          wideActive = actual < 0.999;
           wideZoom = wideActive ? actual : 1;
           digitalZoom = 1;
           return true;
         } catch (error) {
-          if (value < 1) supportedWide.delete(value);
           const current = track.getSettings && track.getSettings().zoom;
           if (Number.isFinite(current)) {
-            wideActive = current < 0.98;
+            wideActive = current < 0.999;
             wideZoom = wideActive ? current : 1;
             digitalZoom = 1;
           }
           statusEl.textContent =
             value < 1
-              ? `이 기기에서는 ${value.toFixed(1)}배로 전환할 수 없습니다.`
+              ? "이 기기에서는 해당 배율로 전환할 수 없습니다."
               : "카메라 배율을 변경하지 못했습니다.";
           return false;
         } finally {
@@ -976,11 +949,22 @@
         digitalZoom = Math.max(1, Math.min(2, value));
         updateZoom();
       }
-      wideButtons.forEach((button) =>
-        button.addEventListener("click", () =>
-          setWideZoom(Number(button.dataset.zoom)),
-        ),
-      );
+      async function updatePinchZoom(value) {
+        pendingPinchZoom = value;
+        if (pinchZoomRunning) return;
+        pinchZoomRunning = true;
+        try {
+          while (pendingPinchZoom !== null) {
+            const target = pendingPinchZoom;
+            pendingPinchZoom = null;
+            if (target < 1 && wideCapability) await setWideZoom(target);
+            else await setDigitalZoom(target);
+          }
+        } finally {
+          pinchZoomRunning = false;
+        }
+      }
+      zoomHalf.addEventListener("click", () => setWideZoom(0.5));
       zoomOne.addEventListener("click", () => setDigitalZoom(1));
       zoomTwo.addEventListener("click", () => setDigitalZoom(2));
       const view = document.querySelector(".view");
@@ -1016,13 +1000,7 @@
           const distance = touchDistance(event.touches);
           if (!pinchStart.distance) return;
           const wanted = (pinchStart.zoom * distance) / pinchStart.distance;
-          if (wanted < 0.95 && supportedWide.size) {
-            const candidates = [...supportedWide];
-            const closest = candidates.reduce((best, value) =>
-              Math.abs(value - wanted) < Math.abs(best - wanted) ? value : best,
-            );
-            setWideZoom(closest);
-          } else setDigitalZoom(wanted);
+          updatePinchZoom(wanted);
         },
         { passive: false },
       );
