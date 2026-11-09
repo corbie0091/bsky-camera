@@ -105,10 +105,15 @@
   const $=id=>document.getElementById(id);
   const video=$('video'), cameraCanvas=$('cameraCanvas'), preview=$('preview'), overlay=$('overlay'), overlayText=$('overlayText');
   const capture=$('capture'), save=$('save'), share=$('share'), retake=$('retake'), retry=$('retry'), fallback=$('fallback'), input=$('cameraInput'), statusEl=$('status');
+  // 업소명은 자사 앱이 링크의 store 값으로 전달합니다.
+  const rawStoreName=(new URLSearchParams(location.search).get('store')||'').replace(/[\u0000-\u001f\u007f]/g,' ').replace(/\s+/g,' ').trim();
+  const storeChars=Array.from(rawStoreName);
+  const storeName=storeChars.length>80?storeChars.slice(0,79).join('')+'…':rawStoreName;
   let stream=null, photo=null, photoUrl=null, starting=false, capturedAt=null;
   let currentMode=location.hash==='#/additional-order'?'additional':'conversion';
   let processingPhoto=false,originalCapture=null,lastResultInfo='';
   const modeName=()=>currentMode==='additional'?'추가주문':'전환';
+  const photoHeading=(review=false)=>modeName()+(storeName?' · '+storeName:'')+(review?' 사진을 확인해 주세요':' 사진을 촬영해 주세요');
   function applyModeUI(){
     $('app').dataset.mode=currentMode;
     $('subtitle').textContent=modeName()+' 사진 촬영 및 저장';
@@ -116,7 +121,7 @@
     $('conversionLink').setAttribute('aria-current',currentMode==='conversion'?'page':'false');
     $('additionalLink').setAttribute('aria-current',currentMode==='additional'?'page':'false');
     capture.textContent=modeName()+' 사진 촬영하기';
-    $('heading').textContent=photo?modeName()+' 사진을 확인해 주세요':modeName()+' 사진을 촬영해 주세요';
+    $('heading').textContent=photoHeading(!!photo);
   }
   function showModeNotice(message){
     qualityToast.textContent=message;clearTimeout(toastTimer);qualityToast.hidden=false;
@@ -288,7 +293,7 @@
       if(photoUrl) URL.revokeObjectURL(photoUrl);
       photoUrl=URL.createObjectURL(photo); preview.src=photoUrl; preview.hidden=false; cameraCanvas.hidden=true; overlay.hidden=true;
       capture.hidden=true; zoomPanel.hidden=true; save.hidden=false; share.hidden=false; retake.hidden=false;
-      $('heading').textContent=modeName()+' 사진을 확인해 주세요';
+      $('heading').textContent=photoHeading(true);
       lastResultInfo=`JPEG · ${(photo.size/1024).toFixed(1)}KB · ${result.width} × ${result.height}px`+(locationAccuracy!==null && locationAccuracy>50?` · 위치 오차 약 ${locationAccuracy}m`:'');
       statusEl.textContent=lastResultInfo;
       const check=$('locationCheck'),checkText=$('locationCheckText');
@@ -498,7 +503,7 @@
   function reset(message){
     if(photoUrl) URL.revokeObjectURL(photoUrl); photoUrl=null;photo=null;originalCapture=null;lastResultInfo='';preview.removeAttribute('src');
     $('locationCheck').hidden=true;$('locationCheck').open=false;locationDebug=null;preview.hidden=true;cameraCanvas.hidden=false;
-    capture.hidden=false;zoomPanel.hidden=false;save.hidden=true;share.hidden=true;retake.hidden=true;input.value='';$('heading').textContent=modeName()+' 사진을 촬영해 주세요';
+    capture.hidden=false;zoomPanel.hidden=false;save.hidden=true;share.hidden=true;retake.hidden=true;input.value='';$('heading').textContent=photoHeading(false);
     qualityField.disabled=false;qualityToast.hidden=true;clearTimeout(toastTimer);statusEl.textContent=message;capture.disabled=!stream || !stream.active;
     if(!stream || !stream.active) startCamera();
   }
@@ -551,6 +556,27 @@
     ctx.arcTo(bx,by+badgeHeight,bx,by,radius);ctx.arcTo(bx,by,bx+badgeWidth,by,radius);
     ctx.closePath();ctx.fill();ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';
     ctx.fillText(badgeText,bx+badgeWidth/2,by+badgeHeight/2);ctx.restore();
+    if(storeName){
+      // 로고와 겹치지 않도록 남은 공간에 업소명을 표시합니다.
+      const nameX=bx+badgeWidth+width*.014,nameWidth=Math.max(0,logoX-width*.018-nameX);
+      if(nameWidth>0){
+        ctx.save();ctx.font=`700 ${Math.max(11,Math.round(width*.034))}px Paperlogy, sans-serif`;
+        ctx.fillStyle='#fff';ctx.strokeStyle='rgba(0,0,0,.88)';ctx.lineWidth=Math.max(2,width*.004);ctx.lineJoin='round';ctx.textAlign='left';ctx.textBaseline='middle';
+        const chars=Array.from(storeName);let first='',index=0;
+        while(index<chars.length && ctx.measureText(first+chars[index]).width<=nameWidth){first+=chars[index++];}
+        if(!first && chars.length){first=chars[0];index=1;}
+        const rest=chars.slice(index).join('');
+        if(rest){
+          const firstY=by+badgeHeight*.29,secondY=by+badgeHeight*.77;
+          ctx.strokeText(first,nameX,firstY,nameWidth);ctx.fillText(first,nameX,firstY,nameWidth);
+          ctx.strokeText(rest,nameX,secondY,nameWidth);ctx.fillText(rest,nameX,secondY,nameWidth);
+        }else{
+          const nameY=by+badgeHeight/2;
+          ctx.strokeText(first,nameX,nameY,nameWidth);ctx.fillText(first,nameX,nameY,nameWidth);
+        }
+        ctx.restore();
+      }
+    }
     ctx.textBaseline='middle';ctx.fillStyle='#fff';
     ctx.font=`700 ${timeFont}px Paperlogy, sans-serif`;
     const timeLimit=panelWidth*.34;
