@@ -16,7 +16,7 @@
     .brand{font-size:19px;font-weight:700;letter-spacing:-.5px;line-height:1.2}.subtitle{margin-top:5px;font-size:11px;line-height:1.35;word-break:keep-all;color:#237d3a;font-weight:700}
     main{padding:14px 18px 28px;flex:1;display:flex;flex-direction:column}
     .heading{font-size:16px;font-weight:700;line-height:1.45;margin:0 0 11px;letter-spacing:-.25px;color:#1b7130}
-    .view{position:relative;width:min(100%,42dvh);align-self:center;flex:0 0 auto;min-height:0;aspect-ratio:1/1;overflow:hidden;background:#152331;border-radius:14px;display:flex;align-items:center;justify-content:center}
+    .view{position:relative;width:min(100%,50dvh);align-self:center;flex:0 0 auto;min-height:0;aspect-ratio:1/1;overflow:hidden;background:#152331;border-radius:14px;display:flex;align-items:center;justify-content:center}
     video,img,.camera-canvas{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:cover;object-position:center}
     #video{opacity:0;pointer-events:none}video[hidden],img[hidden],.camera-canvas[hidden],[hidden]{display:none!important}
     .overlay{position:absolute;inset:0;color:#fff;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:24px;background:#152331;gap:12px;line-height:1.6;font-size:14px}
@@ -32,7 +32,7 @@
     .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:1000;width:max-content;max-width:calc(100vw - 36px);padding:12px 18px;border-radius:10px;background:rgba(21,45,69,.95);color:#fff;font-size:13px;line-height:1.5;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.16)}
     .zoom-controls{display:flex;gap:8px;justify-content:center;align-items:center;margin:12px 0 0}.zoom-controls button{min-height:40px;min-width:58px;padding:0 12px;border:1px solid #D9E2EC;border-radius:20px;background:#fff;color:#152D45;font-size:13px}.zoom-controls button[aria-pressed="true"]{border-color:#27A745;background:#EBF6ED;color:#1b7130}.zoom-controls button:disabled{opacity:.38}.zoom-value{min-width:48px;text-align:center;font-size:13px;font-weight:700;color:#152D45}.zoom-hint{font-size:12px;color:#63758A;text-align:center;margin:6px 0 0;line-height:1.4}.view{touch-action:pan-y}.camera-canvas{touch-action:none}
     .mode-nav{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:0;min-width:0}.mode-nav a{min-height:42px;display:flex;align-items:center;justify-content:center;border:1px solid #D9E2EC;border-radius:10px;color:#63758A;background:#fff;text-decoration:none;font-size:13px;font-weight:700;white-space:nowrap}.mode-nav a[aria-current="page"]{color:#1b7130;background:#EBF6ED;border:2px solid #27A745}.app[data-mode="additional"] .mode-nav a[aria-current="page"]{color:#812091;background:#F5EAF7;border-color:#9C27B0}.app[data-mode="additional"] .subtitle,.app[data-mode="additional"] .heading{color:#812091}.app[data-mode="additional"] .capture{background:#812091}.app[data-mode="additional"] .quality input:checked+span,.app[data-mode="additional"] .zoom-controls button[aria-pressed="true"]{background:#F5EAF7;color:#812091;border-color:#9C27B0}.app[data-mode="additional"] .quality input:focus-visible+span{outline-color:#D9A3E2}
-    @media (max-height:700px){header{padding-top:10px;padding-bottom:10px}main{padding-top:10px}.quality{margin-bottom:12px}.quality legend{margin-bottom:6px}.quality span{min-height:38px}.heading{margin-bottom:8px}.view{width:min(100%,34dvh)}.overlay{gap:6px;padding:10px;font-size:12px}.overlay svg{width:34px;height:34px}.overlay button{min-height:36px;font-size:12px}.zoom-controls{margin-top:8px}.zoom-controls button{min-height:36px}.zoom-hint{margin-top:4px}.actions{margin-top:8px}}
+    @media (max-height:700px){header{padding-top:10px;padding-bottom:10px}main{padding-top:10px}.quality{margin-bottom:12px}.quality legend{margin-bottom:6px}.quality span{min-height:38px}.heading{margin-bottom:8px}.view{width:min(100%,40dvh)}.overlay{gap:6px;padding:10px;font-size:12px}.overlay svg{width:34px;height:34px}.overlay button{min-height:36px;font-size:12px}.zoom-controls{margin-top:8px}.zoom-controls button{min-height:36px}.zoom-hint{margin-top:4px}.actions{margin-top:8px}}
     .location-check{margin-top:12px;border:1px solid var(--line);border-radius:10px;padding:11px 13px;background:#fff;font-size:12px;line-height:1.6;color:var(--ink)}.location-check summary{font-weight:700;cursor:pointer}.location-check p{margin:8px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}.location-check .small{color:var(--muted);font-size:11px}
     dialog{border:1px solid var(--line);border-radius:14px;padding:24px;width:min(90%,380px);text-align:center;color:var(--ink)}dialog::backdrop{background:#152D4599}dialog h2{font-size:19px;margin:0 0 10px}dialog p{font-size:14px;line-height:1.6;color:var(--muted)}.dialog-actions{display:flex;gap:10px;margin-top:18px}.dialog-actions button{flex:1}
   
@@ -57,7 +57,7 @@
     <p class="heading" id="heading">전환 사진을 촬영해 주세요</p>
     <div class="view">
       <video id="video" autoplay muted playsinline aria-label="카메라 미리보기"></video>
-      <canvas id="cameraCanvas" class="camera-canvas" width="960" height="960" aria-label="정사각형 카메라 미리보기"></canvas>
+      <canvas id="cameraCanvas" class="camera-canvas" width="720" height="720" aria-label="정사각형 카메라 미리보기"></canvas>
       <img id="preview" alt="로고가 삽입된 촬영 사진 미리보기" hidden>
       <div class="overlay" id="overlay">
         <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 7h3l1.5-2h7L17 7h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
@@ -239,24 +239,50 @@
   view.addEventListener('touchcancel',()=>{pinchStart=null;},{passive:true});
   updateZoom();
   applyModeUI();
-  let previewFrame=null;
-  function stopPreview(){if(previewFrame!==null){cancelAnimationFrame(previewFrame);previewFrame=null;}}
+  let previewFrame=null,previewTimer=null,previewGeneration=0;
+  function stopPreview(){
+    previewGeneration++;
+    if(previewFrame!==null){cancelAnimationFrame(previewFrame);previewFrame=null;}
+    if(previewTimer!==null){clearTimeout(previewTimer);previewTimer=null;}
+  }
   function startPreview(){
     stopPreview();
-    const ctx=cameraCanvas.getContext('2d',{alpha:false});
+    const generation=previewGeneration,ctx=cameraCanvas.getContext('2d',{alpha:false});
     let firstFrameReady=false;
     function render(){
-      if(!stream || !stream.active){previewFrame=null;return;}
+      previewFrame=null;
+      if(generation!==previewGeneration || !stream || !stream.active) return;
       if(video.readyState>=2 && video.videoWidth>0 && video.videoHeight>0){
         const w=video.videoWidth,h=video.videoHeight,side=Math.min(w,h)/digitalZoom;
-        try {
+        try{
           ctx.drawImage(video,(w-side)/2,(h-side)/2,side,side,0,0,cameraCanvas.width,cameraCanvas.height);
           if(!firstFrameReady){firstFrameReady=true;overlay.hidden=true;capture.disabled=false;}
         }catch(error){/* 다음 프레임에서 다시 시도합니다. */}
       }
-      previewFrame=requestAnimationFrame(render);
+      previewTimer=setTimeout(()=>{
+        previewTimer=null;
+        if(generation===previewGeneration) previewFrame=requestAnimationFrame(render);
+      },1000/15);
     }
     previewFrame=requestAnimationFrame(render);
+  }
+  function pauseCameraForReview(){
+    stopPreview();
+    if(stream) stream.getVideoTracks().forEach(track=>{track.enabled=false;});
+  }
+  function resumeCamera(){
+    const tracks=stream && stream.active?stream.getVideoTracks().filter(track=>track.readyState==='live'):[];
+    if(!tracks.length){
+      if(stream)stream.getTracks().forEach(track=>track.stop());
+      stream=null;video.srcObject=null;startCamera();return;
+    }
+    capture.disabled=true;overlay.hidden=false;retry.hidden=true;fallback.hidden=true;
+    overlayText.textContent='카메라를 다시 연결하고 있습니다.';
+    tracks.forEach(track=>{track.enabled=true;});
+    Promise.resolve(video.play()).then(()=>{if(!photo && stream && stream.active)startPreview();}).catch(()=>{
+      if(stream)stream.getTracks().forEach(track=>track.stop());
+      stream=null;video.srcObject=null;startCamera();
+    });
   }
   async function startCamera(){
     if(starting || (stream && stream.active)) return;
@@ -264,7 +290,7 @@
     overlayText.innerHTML='카메라를 연결하고 있습니다.<br>권한 요청이 나타나면 허용해 주세요.';
     try{
       if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('unsupported');
-      try { stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:3840},height:{ideal:2160}},audio:false}); }
+      try { stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:3840},height:{ideal:2160},frameRate:{ideal:15}},audio:false}); }
       catch(e){ if(e.name==='OverconstrainedError') stream=await navigator.mediaDevices.getUserMedia({video:true,audio:false}); else throw e; }
       video.srcObject=stream; inspectZoom(); await video.play(); startPreview();
       statusEl.textContent='';
@@ -281,7 +307,7 @@
     capturedAt=photoTime || new Date();
     maxBytes=Number(document.querySelector('input[name="quality"]:checked').value)*1024;
     qualityField.disabled=true;
-    capture.disabled=true; statusEl.textContent='위치를 확인하고 사진을 처리하고 있습니다...';
+    capture.disabled=true;pauseCameraForReview(); statusEl.textContent='위치를 확인하고 사진을 처리하고 있습니다...';
     try {
       locationText=await locationPromise;
       if(!logoImage.complete) await new Promise(resolve=>{logoImage.onload=resolve;logoImage.onerror=resolve;});
@@ -301,7 +327,7 @@
       checkText.textContent=locationDebug
         ? `위도: ${locationDebug.latitude.toFixed(6)}\n경도: ${locationDebug.longitude.toFixed(6)}\n기기가 보고한 예상 오차: 약 ${locationDebug.accuracy}m\n사진에 표시된 위치: ${locationText}`
         : `기기 위치를 받지 못했습니다.\n사진에 표시된 위치: ${locationText}`;
-    } catch(e){console.error(e);statusEl.textContent='사진 처리에 실패했습니다. 다시 촬영해 주세요.';capture.disabled=!stream;qualityField.disabled=false;}
+    } catch(e){console.error(e);statusEl.textContent='사진 처리에 실패했습니다. 다시 촬영해 주세요.';qualityField.disabled=false;resumeCamera();}
     finally{processingPhoto=false;}
   }
   let kakaoMapsPromise;
@@ -504,8 +530,8 @@
     if(photoUrl) URL.revokeObjectURL(photoUrl); photoUrl=null;photo=null;originalCapture=null;lastResultInfo='';preview.removeAttribute('src');
     $('locationCheck').hidden=true;$('locationCheck').open=false;locationDebug=null;preview.hidden=true;cameraCanvas.hidden=false;
     capture.hidden=false;zoomPanel.hidden=false;save.hidden=true;share.hidden=true;retake.hidden=true;input.value='';$('heading').textContent=photoHeading(false);
-    qualityField.disabled=false;qualityToast.hidden=true;clearTimeout(toastTimer);statusEl.textContent=message;capture.disabled=!stream || !stream.active;
-    if(!stream || !stream.active) startCamera();
+    qualityField.disabled=false;qualityToast.hidden=true;clearTimeout(toastTimer);statusEl.textContent=message;
+    resumeCamera();
   }
   async function compress(source,sourceWidth,sourceHeight){
     // 높은 해상도와 품질부터 시도하고, 목표 용량 안에서 최대 품질을 찾습니다.
