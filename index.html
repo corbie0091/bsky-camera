@@ -606,8 +606,18 @@
     ctx.textBaseline='middle';ctx.fillStyle='#fff';
     ctx.font=`700 ${timeFont}px Paperlogy, sans-serif`;
     const timeLimit=width*.37;
-    ctx.fillText(time,textX,panelY+panelHeight*.50,timeLimit);
+    // 시간 글자만 조금 촘촘하게 표시하고 날짜와 주소의 위치는 유지합니다.
     const timeWidth=Math.min(ctx.measureText(time).width,timeLimit);
+    const timeChars=Array.from(time),timeSpacing=-timeFont*.025;
+    const advances=timeChars.map(char=>ctx.measureText(char).width);
+    const trackedWidth=advances.reduce((sum,value)=>sum+value,0)+timeSpacing*(timeChars.length-1);
+    const timeScale=Math.min(1,timeLimit/trackedWidth);
+    ctx.save();ctx.translate(textX,panelY+panelHeight*.50);ctx.scale(timeScale,1);
+    ctx.shadowColor='rgba(0,0,0,.9)';ctx.shadowBlur=width*.006;
+    ctx.shadowOffsetX=width*.002;ctx.shadowOffsetY=width*.002;
+    let charX=0;
+    timeChars.forEach((char,index)=>{ctx.fillText(char,charX,0);charX+=advances[index]+timeSpacing;});
+    ctx.restore();
     const detailX=textX+timeWidth+width*.025;
     const detailWidth=Math.max(1,panelX+panelWidth-width*.018-detailX);
     ctx.font=`700 ${detailFont}px Paperlogy, sans-serif`;
