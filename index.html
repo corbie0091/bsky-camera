@@ -615,7 +615,7 @@
     ctx.save();ctx.textBaseline='alphabetic';
     const timeMetrics=ctx.measureText(time),firstMetrics=ctx.measureText(timeChars[0]);
     const timeX=textX+(firstMetrics.actualBoundingBoxLeft || 0)*timeScale;
-    const timeY=bottom-(timeMetrics.actualBoundingBoxDescent || 0)*timeScaleY;
+    const timeY=bottom-(timeMetrics.actualBoundingBoxDescent || 0)*timeScaleY-height*.008;
     ctx.translate(timeX,timeY);ctx.scale(timeScale,timeScaleY);
     ctx.shadowColor='rgba(0,0,0,.9)';ctx.shadowBlur=width*.006;
     ctx.shadowOffsetX=width*.002;ctx.shadowOffsetY=width*.002;
