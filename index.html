@@ -563,11 +563,11 @@
     const time=`${z(d.getHours())}:${z(d.getMinutes())}`;
     const weekdays=['일','월','화','수','목','금','토'];
     const date=`${z(d.getFullYear()%100)}년 ${d.getMonth()+1}월 ${z(d.getDate())}일 (${weekdays[d.getDay()]})`;
-    const edge=width*.028,bottom=height*.965;
+    const edge=width*.028,bottom=height-edge;
     const logoWidth=width*.063*Math.SQRT2,logoHeight=logoWidth*700/900;
     const logoX=width-edge-logoWidth,logoY=height*.028;
     const panelX=edge,panelY=bottom-width*.145,panelWidth=width*.92,panelHeight=width*.145;
-    const textX=panelX+width*.018,timeFont=Math.max(20,Math.round(width*.12));
+    const textX=panelX,timeFont=Math.max(20,Math.round(width*.12));
     const detailFont=Math.max(12,Math.round(width*.034));
     ctx.save();
     // 전환 표시와 로고는 사진의 양쪽 위에서 같은 여백을 유지합니다.
@@ -606,13 +606,17 @@
     ctx.textBaseline='middle';ctx.fillStyle='#fff';
     ctx.font=`700 ${timeFont}px Paperlogy, sans-serif`;
     const timeLimit=width*.37;
-    // 시간 글자만 조금 촘촘하게 표시하고 날짜와 주소의 위치는 유지합니다.
-    const timeWidth=Math.min(ctx.measureText(time).width,timeLimit);
+    // 시간은 상단 배지와 같은 왼쪽·아래쪽 여백에 맞춥니다.
     const timeChars=Array.from(time),timeSpacing=-timeFont*.025;
     const advances=timeChars.map(char=>ctx.measureText(char).width);
     const trackedWidth=advances.reduce((sum,value)=>sum+value,0)+timeSpacing*(timeChars.length-1);
-    const timeScale=Math.min(1,timeLimit/trackedWidth);
-    ctx.save();ctx.translate(textX,panelY+panelHeight*.50);ctx.scale(timeScale,1);
+    const timeScale=Math.min(.86,timeLimit/trackedWidth),timeScaleY=1.12;
+    const timeWidth=trackedWidth*timeScale;
+    ctx.save();ctx.textBaseline='alphabetic';
+    const timeMetrics=ctx.measureText(time),firstMetrics=ctx.measureText(timeChars[0]);
+    const timeX=textX+(firstMetrics.actualBoundingBoxLeft || 0)*timeScale;
+    const timeY=bottom-(timeMetrics.actualBoundingBoxDescent || 0)*timeScaleY;
+    ctx.translate(timeX,timeY);ctx.scale(timeScale,timeScaleY);
     ctx.shadowColor='rgba(0,0,0,.9)';ctx.shadowBlur=width*.006;
     ctx.shadowOffsetX=width*.002;ctx.shadowOffsetY=width*.002;
     let charX=0;
